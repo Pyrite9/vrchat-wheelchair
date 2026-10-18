@@ -1,0 +1,24 @@
+{
+    "name": "Pyrite9.Wheelchair.Editor",
+    "rootNamespace": "",
+    "references": [
+        "Pyrite9.Wheelchair.Runtime",
+        "nadena.dev.ndmf",
+        "nadena.dev.ndmf.runtime",
+        "VRC.SDKBase",
+        "VRC.SDK3A",
+        "VRC.SDKBase.Editor",
+        "VRC.SDK3A.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

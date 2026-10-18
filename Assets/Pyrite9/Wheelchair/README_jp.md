@@ -1,0 +1,121 @@
+# Pyrite9 Wheelchair（車椅子ギミック）
+
+バージョン 1.0.1（2026-10-18）
+
+VRChat アバター用の車椅子ギミックです。ヒューマノイドのアバターにプレハブを入れるだけで、ビルド時にアバターに合わせて自動調整されます。
+
+English: `README_en.md` / 한국어: `README_ko.md` / ライセンス: `LICENSE.txt`
+
+## 必要なもの
+
+- Unity 2022.3（VRChat）、**PC のみ**
+- VRChat SDK – Avatars 3.x
+- Modular Avatar
+- NDMF（Non-Destructive Modular Framework）
+- lilToon
+
+動作確認: Unity 2022.3.22f1 / VRChat SDK Avatars 3.10.5 / Modular Avatar 1.18.7（安定版、新規プロジェクトで確認）・1.19.0-alpha.0 / NDMF 1.14.8 / lilToon 2.3.4。
+これより古いバージョンは確認していません。
+
+## 導入
+
+1. **必要なパッケージを入れる。** VCC / ALCOM でアバターのプロジェクトを「管理」（Manage Project）で開き、**Modular Avatar** と **lilToon** を追加します。
+   NDMF は Modular Avatar と一緒に自動で入ります。安定版（プレビュー版ではないもの）を使ってください。
+2. **このパッケージをインポートする。** `.unitypackage` をダブルクリック（または Unity の `Assets > Import Package > Custom Package…`）し、
+   すべてチェックが入ったまま **Import** を押します。ファイルは `Assets/Pyrite9/Wheelchair/` に入ります。
+
+## 使い方
+
+1. Project ウィンドウで `Assets/Pyrite9/Wheelchair/` を開き、**`Wheelchair.prefab`** を Hierarchy のアバター
+   （VRC Avatar Descriptor が付いたオブジェクト）の上にドラッグします。アバターの子になります。
+   - アバターの中ならどこでも構いません。**アバターの外（シーンの直下など）に置くと何も起きません。**
+   - プレハブを Unpack したり、中のオブジェクトの名前を変えたりしないでください。
+2. （任意）**Wheelchair Root** コンポーネントの設定を変えます（下の「設定」）。
+3. `VRChat SDK > Show Control Panel > Builder` を開き、まず **Build & Test**、問題なければ **Build & Publish**。
+4. Console を確認します。**`[Pyrite9 Wheelchair]`** で始まるメッセージは警告です（下の「困ったとき」）。最後のビルドの詳細はプロジェクトフォルダの `Logs/Pyrite9_Wheelchair_build.txt` に書き出されます。
+   何も出なければ正常に調整されています。
+
+ビルド時に座った姿勢でアバターを測り、大きさ・位置、座面の幅、座る高さ（お尻が座面を突き抜ける場合は体を持ち上げる）、フットレスト、フルトラッキング用センサー、車輪の回転速度を合わせます。
+シーンは変更されません（ビルド用のコピーだけを変更します）。
+
+## Expression Menu
+
+サブメニュー **車椅子** がひとつ追加されます。
+
+| 項目 | パラメータ | 初期値 |
+|---|---|---|
+| オン/オフ | `Wheelchair/On` | オフ |
+| フルトラッキング | `Wheelchair/FBT` | オフ |
+| 後部座席 | `Wheelchair/RearSeat` | オン |
+
+同期パラメータ: **3 ビット**。そのほかのパラメータは内部用です（Modular Avatar が自動で名前を変えます）。
+
+## 機能
+
+- デスクトップ・VR の座りポーズ。指はジェスチャーに従います
+- VR（ヘッドセット＋コントローラー）：プレイスペース移動ツール（OVR Advanced Settings の「Space Drag」など）で自分を持ち上げると、座った姿勢のまま体と車椅子が一緒に上がります（通常の座り高さから約 2.5 m まで）。
+  現実の頭が座った高さより下がると下にも付いていきます（最大 1 m）。このとき車椅子は床に埋まるので、プレイスペース移動ツールで上げ直してください
+- VRChat のフルボディトラッキングがオンで、メニューのフルトラッキングがオフのとき：腰は腰トラッカーに従い、座った脚と足は腰に付いていきます（上に約 2.5 m、下に 1 m まで）。車椅子も腰に付いていくので、プレイスペース移動ツールでまとめて上がります。座る高さは現実の腰トラッカーの位置になるので、現実で立ち上がると体と車椅子が浮きます
+- 移動に合わせて後輪とキャスターが回ります
+- フルトラッキングモード: 脚はトラッカーに従い、車椅子は腰に付いていきます。背中やすねが当たると車椅子が後ろに下がります
+- 後部座席: 車椅子の後ろに、ほかのプレイヤーが立てる場所があります
+
+## 設定（プレハブのルートにある Wheelchair Root コンポーネント）
+
+| 項目 | 意味 |
+|---|---|
+| Menu Language | English / Japanese / Korean（メニュー表示、ビルド時に反映） |
+| Auto Fit | オフにするとプレハブのままの大きさ・位置 |
+| Seat Width Offset | 片側、メートル。+ で広く |
+| Seat Height Offset | メートル。自動で決まる座る高さに足します。+ で体が上へ、- で下へ |
+| Foot Height Offset | メートル。+ で上へ |
+| Foot Forward Offset | メートル。+ で前へ |
+
+## 困ったとき
+
+| Console のメッセージ（`[Pyrite9 Wheelchair] …`）・症状 | 対処 |
+|---|---|
+| `the avatar is not humanoid` | ヒューマノイド（Rig: Humanoid）のアバター専用です。 |
+| `sitting animation not found`、`wheelchair bone WC_Side_L not found`、`wheelchair model object not found`、`WC_HipRef/Seat not found`、`wheel spin state not found` | プレハブの一部が消えたか、名前が変わっています。アバターから車椅子を削除して `Wheelchair.prefab` をもう一度ドラッグしてください。それでも出る場合はパッケージをインポートし直してください。 |
+| `the hips go … m into the seat — raised only …` | 自動の持ち上げが上限（10 cm）に達しました。**Seat Height Offset** でさらに上げてください。 |
+| `chair scale … is far from the reference` | アバターが標準よりかなり小さい・大きいです。Build & Test で確認し、必要なら補正値を使ってください。 |
+| `full-body sensor …`、`knee or foot bone …`、`contact sender or its bone …` not found | フルトラッキングの押し戻しが効かないことがあります。アバターのヒューマノイドのボーン割り当て（胸・脚・足）を確認してください。 |
+| `WC_FBTOffset not found under Seat` | フルトラッキングの押し戻し距離が固定のままになります。プレハブが展開（Unpack）・改変されています。`Wheelchair` オブジェクトを削除して、プレハブを入れ直してください。 |
+| `… bone or 'Wheelchair Sit Height …' blend tree not found`、`unexpected 'Wheelchair Sit Height …' blend tree`、`sitting animation has no RootT.y curve` | VR の高さ追従（頭、またはフルボディトラッキング時は腰）だけが無効になります（ほかは動作します）。パッケージをインポートし直してください。 |
+| `Gesture controller not found` | 座っている間、指がジェスチャーに従わないことがあります。アバターの Gesture レイヤーを設定してください（デフォルトのままでも可）。 |
+| `no hand mask found for the gesture layers` | 座っている間、アバターの Gesture レイヤーが座りポーズを上書きすることがあります（しゃがんだときなど）。アバターの Gesture コントローラーの最初のレイヤーに手のマスクを設定してください。 |
+| `… WheelchairRoot components found` | 車椅子はアバターひとつにつきひとつだけ使ってください。余分なものを削除してください。 |
+| 車椅子メニューが出ない | プレハブがアバターの外にあります。アバターの中に移してください。 |
+| 座りポーズが崩れる・上書きされる | ほかのギミックが同時に Action レイヤーを使っています。座っている間はそちらを切ってください。 |
+| 足がフットレストから外れる・座面が狭い | Foot Height / Foot Forward / Seat Width Offset で調整してください。 |
+| お尻がまだ座面を突き抜ける・体が浮いている | **Seat Height Offset**（+ で上、- で下）を 0.01 m ずつ変えて Build & Test で確認してください。フットレストも自動で付いてきます。 |
+
+## 更新・削除
+
+- **更新:** 新しいパッケージを上からインポートします（すべてチェックしたまま Import）。
+- **アバターから外す:** アバターの中の `Wheelchair` オブジェクトを削除します。
+- **プロジェクトから消す:** `Assets/Pyrite9/Wheelchair/` フォルダを削除します（先にアバターから外してください）。
+
+## 更新履歴
+
+- **1.0.1**（2026-10-18）：フルトラッキングの押し戻しが VRChat のアバタースケーリング（クイックメニューでの身長変更）に合わせて縮むようになりました。以前は小さくしても同じ距離だけ押され、車椅子が大きく動いていました。
+- **1.0.0**（2026-10-17）：初回公開。
+
+## 注意
+
+- ヒューマノイドのアバター専用です。体型によっては上の補正値が必要です。
+- 座りポーズに **Action** レイヤーを使います。Action レイヤーを使うほかのギミックとは競合することがあります。
+- 座っている間、指がジェスチャーに従うようにアバターの Gesture レイヤーを Action レイヤーにコピーします。Gesture レイヤーと同じく、動かすのは手だけです。
+- GoGo Loco が入っている場合、座っている間 `Go/Action` を設定します。
+- パフォーマンス: メッシュ 1、12,196 ポリゴン、マテリアル 1（lilToon）、メニューアイコン 4（256×256）、PhysBone 0、Contact 11（うち 6 個は VR の頭と腰の高さを測るためビルド時に追加）、Station 1。
+
+## ライセンス（要約 — 全文は `LICENSE.txt`）
+
+- 無料です。使用・改変、本ギミックを使ったアバターのアップロード（パブリック・プライベートとも）は自由です。
+- そのアバターを動画・配信・スクリーンショットに使えます（収益化を含む）。
+- ほかの人のアバターに導入する代行（依頼制作など）は、その人が本パッケージを自分で入手した場合に限り可能です。
+- ファイルの再配布・共有・販売は禁止です。
+- クレジット表記は不要ですが、あると嬉しいです。
+- GitHub でも公開しています: https://github.com/Pyrite9/vrchat-wheelchair （GitHub 上での閲覧・フォークは可）。
+
+© Pyrite9

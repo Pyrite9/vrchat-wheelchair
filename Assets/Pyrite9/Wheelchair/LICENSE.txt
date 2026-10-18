@@ -1,0 +1,59 @@
+Pyrite9 Wheelchair — License
+Version 1.1 (2026-10-18)
+© Pyrite9
+
+[English]
+1. This package is free of charge.
+2. You may:
+   - use it in your VRChat avatars and upload those avatars (public or private);
+   - modify it for your avatars;
+   - use avatars that include it in videos, live streams, screenshots and other media, including monetized content;
+   - install it on another person's avatar on their behalf (for example, as a commission),
+     as long as that person obtained this package themselves. Do not pass on files from your own copy.
+3. You may not:
+   - redistribute, share, or sell the files in this package, whether original or modified,
+     including bundling them into other assets or avatar data that you distribute.
+4. Credit is not required. If you would like to give credit, "Pyrite9 Wheelchair © Pyrite9" is appreciated.
+5. The package is provided "as is", without warranty of any kind. The author is not liable for any damage
+   arising from its use.
+6. These terms may be changed. Changes are published with a new version of the package;
+   the terms included in the version you obtained apply to that version.
+7. This package is also published at https://github.com/Pyrite9/vrchat-wheelchair. Viewing it there,
+   downloading it for your own use, and forking it on GitHub as permitted by GitHub's Terms of Service are allowed.
+   Item 3 still applies to distributing the files anywhere else.
+
+[日本語]
+1. 本パッケージは無料です。
+2. できること:
+   - ご自身の VRChat アバターに使用し、そのアバターをアップロードすること（パブリック・プライベートとも）
+   - ご自身のアバター用に改変すること
+   - 本パッケージを使ったアバターを、動画・配信・スクリーンショットなどのメディアに使うこと（収益化を含む）
+   - ほかの人のアバターへの導入を代行すること（依頼制作など）。ただし、その人が本パッケージを自分で入手している場合に限ります。
+     ご自身が持っているファイルを渡すことはできません。
+3. できないこと:
+   - 本パッケージのファイルを、改変の有無にかかわらず再配布・共有・販売すること
+     （ほかのアセットや配布するアバターデータに同梱することを含みます）
+4. クレジット表記は不要です。表記していただける場合は「Pyrite9 Wheelchair © Pyrite9」だと嬉しいです。
+5. 本パッケージは現状のまま提供され、いかなる保証もありません。使用によって生じた損害について、作者は責任を負いません。
+6. 本規約は変更されることがあります。変更は新しいバージョンのパッケージと一緒に公開し、
+   入手したバージョンにはそのバージョンに含まれる規約が適用されます。
+7. 本パッケージは https://github.com/Pyrite9/vrchat-wheelchair でも公開しています。GitHub 上での閲覧、ご自身で使うための取得、
+   GitHub の利用規約に基づくフォークは可能です。それ以外の場所でファイルを配布することには 3. が適用されます。
+
+[한국어]
+1. 이 패키지는 무료입니다.
+2. 할 수 있는 것:
+   - 자신의 VRChat 아바타에 쓰고, 그 아바타를 업로드하는 것(퍼블릭·프라이빗 모두)
+   - 자신의 아바타에 맞게 개변하는 것
+   - 이 패키지를 쓴 아바타를 영상·방송·스크린샷 등 미디어에 쓰는 것(수익 창출 포함)
+   - 다른 사람의 아바타에 대신 달아 주는 것(커미션 등). 단, 그 사람이 이 패키지를 직접 받은 경우에만 됩니다.
+     자신이 가진 파일을 넘겨줄 수는 없습니다.
+3. 할 수 없는 것:
+   - 이 패키지의 파일을 개변 여부와 관계없이 재배포·공유·판매하는 것
+     (다른 에셋이나 배포하는 아바타 데이터에 포함하는 것도 포함)
+4. 크레딧 표기는 필요 없습니다. 표기해 주신다면 "Pyrite9 Wheelchair © Pyrite9"이면 고맙겠습니다.
+5. 이 패키지는 있는 그대로 제공되며 어떤 보증도 하지 않습니다. 사용으로 생긴 손해에 대해 제작자는 책임지지 않습니다.
+6. 이 규약은 바뀔 수 있습니다. 변경은 새 버전의 패키지와 함께 공개하며,
+   받은 버전에는 그 버전에 들어 있는 규약이 적용됩니다.
+7. 이 패키지는 https://github.com/Pyrite9/vrchat-wheelchair 에도 공개되어 있습니다. GitHub에서 보는 것, 자신이 쓰려고 받는 것,
+   GitHub 이용약관에 따른 포크는 할 수 있습니다. 그 밖의 곳에 파일을 배포하는 것에는 3번이 적용됩니다.
