@@ -13,6 +13,11 @@
 //     seat    : 엉덩이가 좌석을 뚫으면 몸 올림 — 앉기 클립 RootT.y·골반 추종 오프셋·센서(WheelchairFit.ApplySeatRaise)
 //     height  : VR 앉은 자세를 머리 높이만큼 올리는 Contact 3개 + Action 블렌드 트리 값(WheelchairFit.SetHeadHeight, 몸 올림 반영)
 //     hip     : VRChat 풀 바디 트래킹 일반 모드 — Action 트래커 상태의 앉기를 골반 높이만큼 올리는 Contact 3개 + 블렌드 트리 값(WheelchairFit.SetHipHeight, 몸 올림 반영)
+//     scale   : 아바타 크기와 상관없이 — 높이 Receiver Scaler 크기를 ScaleFactorInverse에 맞추는 FX 레이어(높이 트리는 height·hip이 ScaleFactorInverse 트리로 감쌈)
+//     afk     : 앉아 있는 동안 AFK — 'Wheelchair Sit'에 모드별 'AFK Wait'(Hold 루프의 트래킹 재적용 멈춤)·'AFK Return'(풀리면 2.3초 뒤 'On <모드>' 재진입),
+//               아바타 자체 AFK(Action·FX 레이어의 AFK 진입 전이)는 휠체어가 켜져 있으면 안 들어가게,
+//               휠체어 Action 레이어의 빈 상태는 WD on(휠체어를 끄면 아바타 자체 AFK·이모트를 덮지 않게),
+//               AFK 모션 모듈이 있으면 인스펙터 'AFK ▸ 사라지기(디졸브/즉시)'를 FX 파라미터 기본값으로(WheelchairAfk)
 //     marker  : 마커 제거
 //   로그 Logs/Pyrite9_Wheelchair_build.txt — 프로젝트에 Logs/가 있을 때만. WARN 줄은 받는 사람 콘솔에도 경고로 뜨므로 영어로 쓴다(EXCEPTION은 LogException)
 #if UNITY_EDITOR
@@ -37,6 +42,7 @@ namespace Pyrite9.Wheelchair
 
         const string LogPath = "Logs/Pyrite9_Wheelchair_build.txt";
         static readonly StringBuilder Log = new StringBuilder();
+        static bool heightScaled;   // scale 패스가 붙었나 → 빌드 기록
 
         protected override void Configure()
         {
@@ -58,6 +64,8 @@ namespace Pyrite9.Wheelchair
                 .Then.Run("Raise the body above the seat", ctx => Guard(ctx, "seat", SeatRaise))
                 .Then.Run("VR sit height follows head", ctx => Guard(ctx, "height", HeadHeight))
                 .Then.Run("Full-body sit height follows hips", ctx => Guard(ctx, "hip", HipHeight))
+                .Then.Run("Height follow works at any avatar scale", ctx => Guard(ctx, "scale", HeightScale))
+                .Then.Run("AFK while seated", ctx => Guard(ctx, "afk", Afk))
                 .Then.Run("Remove marker", ctx => Guard(ctx, "marker", RemoveMarkers));
         }
 
@@ -70,20 +78,41 @@ namespace Pyrite9.Wheelchair
 
         static void Guard(BuildContext ctx, string step, System.Action<BuildContext> body)
         {
-            if (step == "gesture") { Log.Clear(); Log.AppendLine($"=== Pyrite9 Wheelchair {WcConst.Version} NDMF {System.DateTime.Now:HH:mm:ss} — {ctx.AvatarRootObject.name} ==="); }
+            if (step == "gesture")
+            {
+                Log.Clear(); Log.AppendLine($"=== Pyrite9 Wheelchair {WcConst.Version} NDMF {System.DateTime.Now:HH:mm:ss} — {ctx.AvatarRootObject.name} ===");
+                heightScaled = false; WheelchairFit.ForgetBuild(ctx.AvatarRootTransform);
+            }
+            bool found = false;
             try
             {
                 if (FindHolder(ctx.AvatarRootTransform) == null) { Log.AppendLine(step + ": 휠체어 없음 — 건너뜀"); return; }
+                found = true;
                 body(ctx);
             }
             catch (System.Exception e) { Log.AppendLine(step + " EXCEPTION: " + e); Debug.LogException(e); }
             finally
             {
-                if (step == "marker")   // 마지막 패스: 경고를 콘솔로(받는 쪽엔 로그 파일이 없을 수 있다)
-                    foreach (var line in Log.ToString().Split('\n').Where(l => l.Contains("WARN")))
-                        Debug.LogWarning("[Pyrite9 Wheelchair] " + ctx.AvatarRootObject.name + ": " + line.Trim());
+                if (step == "marker" && found)   // 마지막 패스: 경고를 콘솔로(받는 쪽엔 로그 파일이 없을 수 있다) + 인스펙터 '마지막 빌드' 기록
+                {
+                    var warns = Log.ToString().Split('\n').Where(l => l.Contains("WARN")).Select(l => l.Trim()).ToList();
+                    foreach (var line in warns) Debug.LogWarning("[Pyrite9 Wheelchair] " + ctx.AvatarRootObject.name + ": " + line);
+                    WriteRecord(ctx, warns);
+                }
                 if (Directory.Exists("Logs")) { try { File.WriteAllText(LogPath, Log.ToString(), new UTF8Encoding(false)); } catch { } }
             }
+        }
+
+        static void WriteRecord(BuildContext ctx, System.Collections.Generic.List<string> warns)
+        {
+            var root = ctx.AvatarRootTransform;
+            bool fitted = WheelchairFit.TryGetScale(root, out var s);
+            WheelchairFit.TryGetRaise(root, out var r);
+            WcBuildRecord.Put(new WcBuildRecord.Entry
+            {
+                avatar = ctx.AvatarRootObject.name, time = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), version = WcConst.Version,
+                fitted = fitted, scale = s, raise = r, heightScale = heightScaled, warnings = warns,
+            });
         }
 
         // 메뉴 라벨: 프리팹 안 Menu Item 오브젝트 이름 → WcMenuLabels 표에서 마커 언어로
@@ -259,7 +288,7 @@ namespace Pyrite9.Wheelchair
             var desc = ctx.AvatarRootObject.GetComponent<VRCAvatarDescriptor>();
             var act = desc.baseAnimationLayers.FirstOrDefault(l => l.type == VRCAvatarDescriptor.AnimLayerType.Action).animatorController as AnimatorController;
             if (act == null || !ctx.IsTemporaryAsset(act)) { Log.AppendLine("height: Action 없음 또는 빌드용 복제본 아님 — 건너뜀"); return; }
-            WheelchairFit.SetHeadHeight(act, ctx.AvatarRootTransform, FindHolder(ctx.AvatarRootTransform), clip => NewClipCopy(ctx, clip), Log);
+            WheelchairFit.SetHeadHeight(act, ctx.AvatarRootTransform, FindHolder(ctx.AvatarRootTransform), clip => NewClipCopy(ctx, clip), o => SaveNew(ctx, o), Log);
         }
 
         // VRChat 풀 바디 트래킹 일반 모드(9-41): Contact 3개 추가 + 빌드 사본 Action 트래커 상태의 블렌드 트리 문턱값·올린/내린 클립 (WheelchairFit.SetHipHeight)
@@ -269,7 +298,45 @@ namespace Pyrite9.Wheelchair
             var desc = ctx.AvatarRootObject.GetComponent<VRCAvatarDescriptor>();
             var act = desc.baseAnimationLayers.FirstOrDefault(l => l.type == VRCAvatarDescriptor.AnimLayerType.Action).animatorController as AnimatorController;
             if (act == null || !ctx.IsTemporaryAsset(act)) { Log.AppendLine("hip: Action 없음 또는 빌드용 복제본 아님 — 건너뜀"); return; }
-            WheelchairFit.SetHipHeight(act, ctx.AvatarRootTransform, FindHolder(ctx.AvatarRootTransform), clip => NewClipCopy(ctx, clip), Log);
+            WheelchairFit.SetHipHeight(act, ctx.AvatarRootTransform, FindHolder(ctx.AvatarRootTransform), clip => NewClipCopy(ctx, clip), o => SaveNew(ctx, o), Log);
+        }
+
+        // 앉아 있는 동안 AFK(WheelchairAfk): 빌드 사본 Action의 Hold 루프 멈춤·복귀, Action·FX의 아바타 자체 AFK 막기
+        static void Afk(BuildContext ctx)
+        {
+            ctx.DeactivateExtensionContext<AnimatorServicesContext>();
+            var desc = ctx.AvatarRootObject.GetComponent<VRCAvatarDescriptor>();
+            var act = desc.baseAnimationLayers.FirstOrDefault(l => l.type == VRCAvatarDescriptor.AnimLayerType.Action).animatorController as AnimatorController;
+            var fx = desc.baseAnimationLayers.FirstOrDefault(l => l.type == VRCAvatarDescriptor.AnimLayerType.FX).animatorController as AnimatorController;
+            if (act == null || !ctx.IsTemporaryAsset(act)) { Log.AppendLine("afk: Action 없음 또는 빌드용 복제본 아님 — 건너뜀"); return; }
+            // 원본 에셋 보호: 빌드 컨테이너 밖의 저장된 오브젝트(전이)는 고치지 않는다
+            System.Func<Object, bool> writable = o => !EditorUtility.IsPersistent(o) || ctx.IsTemporaryAsset(o);
+            WheelchairAfk.PauseHoldLoop(act, writable, Log);
+            WheelchairAfk.PassThroughEmptyStates(act, writable, Log);
+            WheelchairAfk.BlockAvatarAfk(act, "Action", writable, Log);
+            if (fx != null && ctx.IsTemporaryAsset(fx))
+            {
+                WheelchairAfk.BlockAvatarAfk(fx, "FX", writable, Log);
+                var mark = FindHolder(ctx.AvatarRootTransform).GetComponent<WheelchairRoot>();
+                WheelchairAfk.SetVanish(fx, mark != null && mark.afkVanish == AfkVanish.Instant, Log);
+            }
+            else Log.AppendLine("afk: FX 없음 또는 빌드용 복제본 아님 — FX 쪽 AFK 막기 건너뜀");
+        }
+
+        // 크기 무관(9-53): FX 레이어가 높이 Receiver의 Scaler 크기를 ScaleFactorInverse에 맞춘다 (WheelchairFit.AddHeightScaleLayer)
+        static void HeightScale(BuildContext ctx)
+        {
+            ctx.DeactivateExtensionContext<AnimatorServicesContext>();
+            var desc = ctx.AvatarRootObject.GetComponent<VRCAvatarDescriptor>();
+            var fx = desc.baseAnimationLayers.FirstOrDefault(l => l.type == VRCAvatarDescriptor.AnimLayerType.FX).animatorController as AnimatorController;
+            if (fx == null || !ctx.IsTemporaryAsset(fx)) { Log.AppendLine("scale: WARN FX controller not found — height follow may break when the avatar is resized"); return; }
+            heightScaled = WheelchairFit.AddHeightScaleLayer(fx,ctx.AvatarRootTransform, o => SaveNew(ctx, o), Log);
+        }
+
+        // 빌드 때 새로 만든 오브젝트(블렌드 트리·클립·상태 기계)를 빌드 컨테이너에 저장 — 이미 저장된 것은 그대로
+        static void SaveNew(BuildContext ctx, Object o)
+        {
+            if (o != null && !EditorUtility.IsPersistent(o)) ctx.AssetSaver.SaveAsset(o);
         }
 
         // 올린/내린 앉기 클립용: 원본이 임시든 아니든 항상 새 사본을 만들어 빌드 컨테이너에 저장

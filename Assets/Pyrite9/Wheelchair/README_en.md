@@ -1,6 +1,6 @@
 # Pyrite9 Wheelchair
 
-Version 1.0.1 (2026-10-18)
+Version 1.0.2 (2026-10-19)
 
 A wheelchair gimmick for VRChat avatars. Drop the prefab under any humanoid avatar — it fits itself to the avatar when you build.
 
@@ -56,11 +56,13 @@ Synced parameter cost: **3 bits**. Other parameters are internal (renamed automa
 
 - Sitting pose for desktop and VR, fingers keep following your gestures
 - VR (headset + controllers): if you raise yourself with a playspace mover (e.g. OVR Advanced Settings "Space Drag"), your whole seated body and the chair rise together — up to about 2.5 m above the normal seated height.
-  It also follows down (up to 1 m) when your real head goes lower than the seated height; the chair then sinks into the floor, so raise yourself back with the playspace mover
+  It also follows down (up to 1 m) when your real head goes lower than the seated height; the chair then sinks into the floor, so raise yourself back with the playspace mover.
+  Works at any VRChat avatar scale (changing your height in the Quick Menu)
 - VR with VRChat full-body tracking on, Full Body Tracking menu off: your hips follow your hip tracker and the seated legs and feet follow your hips (up to about 2.5 m up, 1 m down); the chair follows your hips, so a playspace mover raises everything together. The seated height is where your real hip tracker is, so standing up in real life lifts you and the chair
 - Wheels and casters spin with your movement
 - Full Body Tracking mode: legs follow your trackers, the chair follows your hips, and slides back when your back or shins push into it
 - Rear Seat: a standing spot behind the chair that other players can use
+- AFK while seated: with the wheelchair on, you stay seated instead of playing your avatar's own AFK animation, and sit back properly when you return. With the wheelchair off, your avatar's own AFK plays as usual
 
 ## Settings (Wheelchair Root component on the prefab root)
 
@@ -73,6 +75,12 @@ Synced parameter cost: **3 bits**. Other parameters are internal (renamed automa
 | Foot Height Offset | Meters. + up |
 | Foot Forward Offset | Meters. + forward |
 
+The inspector also has (its text follows Menu Language):
+
+- **Preview sitting**: builds a copy of the avatar with the current settings and seats it in place (takes a few seconds). Scene view only, never saved to the scene; turning it off puts everything back. Press **Refresh** after changing the offsets.
+- **Last build**: the chair scale, body raise and warnings decided at the last Play or upload, with buttons for the build log and the README.
+- **Version**: once a day it asks GitHub for the latest version and tells you when a newer one is out (see Notes).
+
 ## Troubleshooting
 
 | Console message (`[Pyrite9 Wheelchair] …`) or symptom | What to do |
@@ -84,6 +92,7 @@ Synced parameter cost: **3 bits**. Other parameters are internal (renamed automa
 | `full-body sensor …`, `knee or foot bone …`, `contact sender or its bone …` not found | Full Body Tracking push-back may not work. Check the avatar's humanoid bone mapping (chest, legs, feet). |
 | `WC_FBTOffset not found under Seat` | Full Body Tracking push-back keeps a fixed distance. The prefab was probably unpacked or edited — delete the `Wheelchair` object and drag the prefab in again. |
 | `… bone or 'Wheelchair Sit Height …' blend tree not found`, `unexpected 'Wheelchair Sit Height …' blend tree`, `sitting animation has no RootT.y curve` | VR height follow (by the head, or by the hips with full-body tracking) is skipped; everything else works. Import the package again. |
+| `FX controller not found — height follow may break when the avatar is resized` | VR height following may stop working when the avatar is resized. Assign an FX layer controller to the avatar (an empty one is fine). |
 | `Gesture controller not found` | Fingers may stop following gestures while seated. Set a Gesture layer on the avatar descriptor (or leave it as default). |
 | `no hand mask found for the gesture layers` | A Gesture layer of your avatar may override the sitting pose while seated (e.g. when crouching). Give the first layer of the avatar's Gesture controller a hand mask. |
 | `… WheelchairRoot components found` | Use only one wheelchair per avatar. Remove the extra one. |
@@ -100,6 +109,7 @@ Synced parameter cost: **3 bits**. Other parameters are internal (renamed automa
 
 ## Changelog
 
+- **1.0.2** (2026-10-19): VR height following (Space Drag) now works at any VRChat avatar scale (before, scaling the avatar up straightened the legs). AFK while seated keeps you seated and sits you back down when you return. Fixed your avatar's own AFK and emotes being covered while the wheelchair is off. New inspector (sitting preview, last build, update notice).
 - **1.0.1** (2026-10-18): Full Body Tracking push-back now scales with VRChat avatar scaling (changing your height in the Quick Menu). Before, a smaller avatar pushed the chair the same distance and it moved too far.
 - **1.0.0** (2026-10-17): First release.
 
@@ -109,6 +119,7 @@ Synced parameter cost: **3 bits**. Other parameters are internal (renamed automa
 - Uses the **Action** layer for the sitting pose. Other gimmicks that also use the Action layer may conflict.
 - While seated, your avatar's Gesture layers are copied into the Action layer so the fingers keep following your gestures. Like in the Gesture layer, they only move the hands.
 - If GoGo Loco is installed, `Go/Action` is set while seated.
+- When you open the wheelchair inspector in the Unity Editor, it asks GitHub (`api.github.com`) for this package's latest version once a day. Nothing is sent; click the version text to check again right away.
 - Performance: 1 mesh, 12,196 triangles, 1 material (lilToon), 4 menu icons (256×256), 0 PhysBones, 11 Contacts (6 are added at build time to measure head and hip height in VR), 1 Station.
 
 ## License (summary — the full text is in `LICENSE.txt`)

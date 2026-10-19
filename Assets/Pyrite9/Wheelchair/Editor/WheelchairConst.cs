@@ -6,7 +6,7 @@ namespace Pyrite9.Wheelchair
 {
     public static class WcConst
     {
-        public const string Version = "1.0.1";   // README 3종 맨 위·빌드 로그 머리줄과 같이 올린다
+        public const string Version = "1.0.2";   // README 3종 맨 위·빌드 로그 머리줄과 같이 올린다
         public const string ModelName = "WheelChair";
         public const string HipRefName = "WC_HipRef";
         public const string FollowName = "WC_FollowHips";

@@ -79,6 +79,12 @@ namespace Pyrite9.Wheelchair
         static readonly Dictionary<int, AnimationClip> SitByAvatar = new Dictionary<int, AnimationClip>();
         // fitB가 정한 몸 올림(루트 기준 m, 자동 + 수동) → seat 패스·height 패스가 쓴다
         static readonly Dictionary<int, float> RaiseByAvatar = new Dictionary<int, float>();
+        // fitA가 정한 휠체어 배율 → 인스펙터 '마지막 빌드'(WcBuildRecord)
+        static readonly Dictionary<int, float> ScaleByAvatar = new Dictionary<int, float>();
+
+        public static bool TryGetScale(Transform root, out float s) => ScaleByAvatar.TryGetValue(root.GetInstanceID(), out s);
+        public static bool TryGetRaise(Transform root, out float r) => RaiseByAvatar.TryGetValue(root.GetInstanceID(), out r);
+        public static void ForgetBuild(Transform root) { ScaleByAvatar.Remove(root.GetInstanceID()); RaiseByAvatar.Remove(root.GetInstanceID()); }
 
         static AnimationClip FirstClip(Motion m)
         {
@@ -139,6 +145,7 @@ namespace Pyrite9.Wheelchair
             if (!HasRig(holder)) { log.AppendLine("fitA: WARN wheelchair bone WC_Side_L not found — automatic fitting skipped"); return false; }
             float s = hp.y / RefHipHeightV8;
             if (Mathf.Abs(s - 1f) < 0.01f) s = 1f;
+            ScaleByAvatar[root.GetInstanceID()] = s;
 
             var model = holder.Find(WcConst.ModelName);
             if (model == null) { log.AppendLine("fitA: WARN wheelchair model object not found — automatic fitting skipped"); return false; }
@@ -313,20 +320,27 @@ namespace Pyrite9.Wheelchair
         //   Sender = Head 뼈. 값 v = 1 − (거리 − Sender 반지름) / R → 머리가 높을수록 큼. 바닥 앉기 @ v0(거리 0.9R), 올린 앉기 @ v1(거리 0.05R, 올림 0.85R).
         //   v0 아래(실제로 더 숙임·값이 안 옴 = 0)는 바닥 앉기에서 멈춘다. 빌드 사본(Action·올린 클립)에만 쓴다
         public const float HeadRecvMaxR = 3f, HeadRestFrac = 0.9f, HeadTopFrac = 0.05f, HeadSenderR = 0.005f;
-        public const float HeadDownMax = 1.0f;   // 아래로 따라가기 최대(루트 기준 m) — 앉은 머리에서 바닥 근처까지. 휠체어도 골반을 따라 바닥에 파묻힘(관리자 결정)
+        public const float HeadDownMax = 1.0f;   // 아래로 따라가기 최대(루트 기준 m, 기본 크기) — 앉은 머리에서 바닥 근처까지. 휠체어도 골반을 따라 바닥에 파묻힘(관리자 결정)
+        // 🔴 크기 무관(1.0.2~, own-model 9-53): Receiver 반경은 VRChat에서 월드 3m로 잘린다 → 아바타를 키우면(Kipfel 1.2배~) 값이 0이 돼 다리가 펴졌다.
+        //   Receiver를 'WC_<부위>HeightScaler'(앉은 뼈 자리) 밑에 두고 FX가 그 크기를 ScaleFactorInverse/sr로 → Receiver는 늘 월드 반경 3m(재는 값 = 월드 높이 ÷ 3).
+        //   앉기 올림(아바타 기준)은 월드 높이 ÷ 배율이어야 하므로 높이 트리를 ScaleFactorInverse 1D 트리로 한 겹 감싼다:
+        //   [바닥 앉기 @0, 높이 트리(올림·내림 ×ScaleTreeMax) @ScaleTreeMax] → 올림 = (값 비율) × 기본 올림 × ScaleFactorInverse (정확한 곱 — RootT 선형 섞기)
+        public const string ScaleParam = "ScaleFactorInverse";   // VRChat 내장(1 ÷ 지금 크기/기본 크기, 동기화)
+        public const float ScaleTreeMax = 10f;                   // 0.1배까지 줄여도 정확(더 작으면 올림이 덜 됨 — 안전한 쪽)
+        public const string ScaleLayer = "Wheelchair Height Scale";
 
-        public static int SetHeadHeight(AnimatorController action, Transform root, Transform holder, System.Func<AnimationClip, AnimationClip> newCopy, StringBuilder log) =>
-            SetBoneHeight(action, root, holder, newCopy, log, HumanBodyBones.Head, "Head", "height",
+        public static int SetHeadHeight(AnimatorController action, Transform root, Transform holder, System.Func<AnimationClip, AnimationClip> newCopy, System.Action<Object> save, StringBuilder log) =>
+            SetBoneHeight(action, root, holder, newCopy, save, log, HumanBodyBones.Head, "Head", "height",
                 WcConst.HeadHeightTag, WcConst.HeadHeightParam, WcConst.HeadHeightTree, WcConst.HeadDownParam, WcConst.HeadDownTree, true);
 
         // VRChat 풀 바디 트래킹 일반 모드(9-40·9-41): Action 트래커 상태의 앉기(발 위치는 루트 기준이라 자세째 올려야 골반 밑에 옴)를
         //   골반 높이만큼. 골반 뼈는 골반 트래커를 따르므로 재는 값이 올린 자세에 되먹지 않는다. seat 패스가 이 클립도 올리므로 몸 올림 반영
-        public static int SetHipHeight(AnimatorController action, Transform root, Transform holder, System.Func<AnimationClip, AnimationClip> newCopy, StringBuilder log) =>
-            SetBoneHeight(action, root, holder, newCopy, log, HumanBodyBones.Hips, "Hip", "hip",
+        public static int SetHipHeight(AnimatorController action, Transform root, Transform holder, System.Func<AnimationClip, AnimationClip> newCopy, System.Action<Object> save, StringBuilder log) =>
+            SetBoneHeight(action, root, holder, newCopy, save, log, HumanBodyBones.Hips, "Hip", "hip",
                 WcConst.HipHeightTag, WcConst.HipHeightParam, WcConst.HipHeightTree, WcConst.HipDownParam, WcConst.HipDownTree, true);
 
         //   트리 자식은 프리팹에선 전부 앉기 클립 하나(올림 0 — 패스가 안 돌면 안 움직임). 올린/내린 클립은 여기서 새 사본으로 만든다(newCopy = 항상 새 빌드 사본)
-        static int SetBoneHeight(AnimatorController ctrl, Transform root, Transform holder, System.Func<AnimationClip, AnimationClip> newCopy, StringBuilder log,
+        static int SetBoneHeight(AnimatorController ctrl, Transform root, Transform holder, System.Func<AnimationClip, AnimationClip> newCopy, System.Action<Object> save, StringBuilder log,
             HumanBodyBones boneId, string label, string tag, string contactTag, string upParam, string upTree, string downParam, string downTree, bool addSeatRaise)
         {
             if (!HasRig(holder)) { log.AppendLine($"{tag}: 조절 본 없음 — 건너뜀"); return 0; }
@@ -337,26 +351,33 @@ namespace Pyrite9.Wheelchair
                 .Where(b => b.name == upTree).Distinct().ToList();
             if (bone == null || trees.Count == 0) { log.AppendLine($"{tag}: WARN {boneId} bone or '{upTree}' blend tree not found — VR height follow skipped"); return 0; }
 
-            // 루트 기준 단위(루트 배율 sr). 반경은 local·world 어느 쪽에서 잘려도 3 이하가 되게
+            // 월드 단위로 잰다 — Receiver는 크기가 ScaleFactorInverse/sr로 맞춰지는 'Scaler' 밑(월드 배율 1 = 반경 늘 월드 3m, 크기 무관)
             float sr = Mathf.Max(1e-4f, root.lossyScale.x);
-            float R = Mathf.Min(HeadRecvMaxR, HeadRecvMaxR / sr);
-            float rs = HeadSenderR / sr;
+            const float R = HeadRecvMaxR;             // 월드 m
+            float rs = HeadSenderR;                   // 월드 m(기본 크기 — 키우면 Sender도 커지지만 0.005·배율이라 무시할 만함)
             var boneSit = WithSitPose(root, sit, () => root.InverseTransformPoint(bone.position));
             if (addSeatRaise && RaiseByAvatar.TryGetValue(root.GetInstanceID(), out var raised)) boneSit.y += raised;   // seat 패스가 앉기 클립을 올렸다
-            var center = new Vector3(boneSit.x, boneSit.y + HeadRestFrac * R, boneSit.z);
-            float D = (HeadRestFrac - HeadTopFrac) * R;
+            float D = (HeadRestFrac - HeadTopFrac) * R;    // 최대 올림(월드 m, 크기 무관)
             float V(float d) => 1f - (d - rs) / R;
             float v0 = V(HeadRestFrac * R), v1 = V(HeadTopFrac * R);
 
-            var rgo = new GameObject($"WC_{label}HeightReceiver");
-            rgo.transform.SetParent(root, false);
-            var rc = rgo.AddComponent<VRC.SDK3.Dynamics.Contact.Components.VRCContactReceiver>();
-            rc.shapeType = VRC.Dynamics.ContactBase.ShapeType.Sphere;
-            rc.radius = R; rc.position = center;
-            rc.receiverType = VRC.Dynamics.ContactReceiver.ReceiverType.Proximity;
-            rc.parameter = upParam;
-            rc.allowSelf = true; rc.allowOthers = false; rc.localOnly = false;
-            rc.collisionTags = new List<string> { contactTag };
+            var scaler = new GameObject($"WC_{label}HeightScaler").transform;
+            scaler.SetParent(root, false);
+            scaler.localPosition = boneSit; scaler.localRotation = Quaternion.identity; scaler.localScale = Vector3.one / sr;   // FX가 없을 때 = 기본 크기(ScaleFactorInverse 1)
+            VRC.SDK3.Dynamics.Contact.Components.VRCContactReceiver Recv(string name, string param, Vector3 offset)
+            {
+                var go = new GameObject(name);
+                go.transform.SetParent(scaler, false);
+                var c = go.AddComponent<VRC.SDK3.Dynamics.Contact.Components.VRCContactReceiver>();
+                c.shapeType = VRC.Dynamics.ContactBase.ShapeType.Sphere;
+                c.radius = R; c.position = offset;
+                c.receiverType = VRC.Dynamics.ContactReceiver.ReceiverType.Proximity;
+                c.parameter = param;
+                c.allowSelf = true; c.allowOthers = false; c.localOnly = false;
+                c.collisionTags = new List<string> { contactTag };
+                return c;
+            }
+            Recv($"WC_{label}HeightReceiver", upParam, new Vector3(0, HeadRestFrac * R, 0));
             var sgo = new GameObject($"WC_{label}HeightSender");
             sgo.transform.SetParent(bone, false);
             var sd = sgo.AddComponent<VRC.SDK3.Dynamics.Contact.Components.VRCContactSender>();
@@ -364,62 +385,112 @@ namespace Pyrite9.Wheelchair
             sd.radius = HeadSenderR / Mathf.Max(1e-4f, bone.lossyScale.x);
             sd.collisionTags = new List<string> { contactTag };
 
+            // 올린 클립: ScaleFactorInverse = ScaleTreeMax 가지에 두므로 기본 올림(월드 D ÷ sr = 루트 기준)의 ScaleTreeMax배
+            AnimationClip lowClip = null;
             foreach (var bt in trees)
             {
                 var ch = bt.children;
                 if (ch.Length < 2 || !(ch[0].motion is AnimationClip low) || !(ch[1].motion is AnimationClip)) { log.AppendLine($"{tag}: WARN unexpected '{upTree}' blend tree — VR height follow skipped for it"); continue; }
+                lowClip = low;
                 var up = newCopy(low); up.name = low.name + "_Up";
                 var b = EditorCurveBinding.FloatCurve("", typeof(Animator), "RootT.y");
                 var cv = AnimationUtility.GetEditorCurve(low, b);
                 if (cv == null) { log.AppendLine($"{tag}: WARN sitting animation has no RootT.y curve — VR height follow skipped"); return 0; }
-                var ks = cv.keys; float add = D / anim.humanScale;
+                var ks = cv.keys; float add = D / sr * ScaleTreeMax / anim.humanScale;
                 for (int k = 0; k < ks.Length; k++) ks[k].value += add;
                 cv.keys = ks;
                 AnimationUtility.SetEditorCurve(up, b, cv);
                 ch[0].threshold = v0; ch[1].threshold = v1; ch[1].motion = up;
                 bt.useAutomaticThresholds = false;
                 bt.children = ch;
-                log.AppendLine($"{tag}: 앉은 {label} {boneSit.ToString("F3")}, Receiver 중심 {center.ToString("F3")} R {R:F3}(루트 배율 {sr:F3}) → v0 {v0:F4} · v1 {v1:F4}, 최대 올림 {D:F3}m (RootT.y +{add:F4}, humanScale {anim.humanScale:F3})");
+                log.AppendLine($"{tag}: 앉은 {label} {boneSit.ToString("F3")}(루트 배율 {sr:F3}), Receiver 월드 반경 {R} · 중심 위 {HeadRestFrac * R:F2}m → v0 {v0:F4} · v1 {v1:F4}, 최대 올림 월드 {D:F3}m(크기 무관) — 트리 가지 RootT.y +{add:F4}(×{ScaleTreeMax}, humanScale {anim.humanScale:F3})");
             }
+            if (lowClip == null) return 0;
 
             // 아래로 따라가기: 두 번째 Receiver 중심 = 앉은 높이 R 아래 → 앉은 높이 이상이면 범위 밖(0), 내려간 L만큼 값 ≈ L / R.
             //   바깥 트리 [위 트리 @vd0, 내린 앉기 @vd1(내림 Dd)]. 값이 0이면(측정 안 됨 포함) 위 트리 = 바닥 앉기라 안전
             var downTrees = ctrl.layers.SelectMany(l => AllStates(l.stateMachine)).SelectMany(st => Trees(st.motion))
                 .Where(b => b.name == downTree).Distinct().ToList();
+            var bR = EditorCurveBinding.FloatCurve("", typeof(Animator), "RootT.y");
+            var lowCv = AnimationUtility.GetEditorCurve(lowClip, bR);
             if (downTrees.Count > 0)
             {
-                float Dd = Mathf.Min(HeadDownMax, 0.9f * R);
-                var dcenter = new Vector3(boneSit.x, boneSit.y - R, boneSit.z);
-                var dgo = new GameObject($"WC_{label}DownReceiver");
-                dgo.transform.SetParent(root, false);
-                var drc = dgo.AddComponent<VRC.SDK3.Dynamics.Contact.Components.VRCContactReceiver>();
-                drc.shapeType = VRC.Dynamics.ContactBase.ShapeType.Sphere;
-                drc.radius = R; drc.position = dcenter;
-                drc.receiverType = VRC.Dynamics.ContactReceiver.ReceiverType.Proximity;
-                drc.parameter = downParam;
-                drc.allowSelf = true; drc.allowOthers = false; drc.localOnly = false;
-                drc.collisionTags = new List<string> { contactTag };
+                float Dd = Mathf.Min(HeadDownMax * sr, 0.9f * R);   // 월드 m(기본 크기에서 루트 기준 1m)
+                Recv($"WC_{label}DownReceiver", downParam, new Vector3(0, -R, 0));
                 float vd0 = V(R), vd1 = V(R - Dd);
-                var lowClip = trees[0].children[0].motion as AnimationClip;
-                var bR = EditorCurveBinding.FloatCurve("", typeof(Animator), "RootT.y");
-                var lowCv = lowClip != null ? AnimationUtility.GetEditorCurve(lowClip, bR) : null;
                 foreach (var bt in downTrees)
                 {
                     var ch = bt.children;
                     if (lowCv == null || ch.Length < 2 || !(ch[1].motion is AnimationClip)) { log.AppendLine($"{tag}: WARN unexpected '{downTree}' blend tree — VR follow-down skipped"); continue; }
                     var dn = newCopy(lowClip); dn.name = lowClip.name + "_Down";
                     var cv = new AnimationCurve(lowCv.keys);
-                    var ks = cv.keys; float sub = Dd / anim.humanScale;
+                    var ks = cv.keys; float sub = Dd / sr * ScaleTreeMax / anim.humanScale;
                     for (int k = 0; k < ks.Length; k++) ks[k].value -= sub;
                     cv.keys = ks;
                     AnimationUtility.SetEditorCurve(dn, bR, cv);
                     ch[0].threshold = vd0; ch[1].threshold = vd1; ch[1].motion = dn;
                     bt.useAutomaticThresholds = false;
                     bt.children = ch;
-                    log.AppendLine($"{tag}: 아래로 — Receiver 중심 {dcenter.ToString("F3")} R {R:F3} → vd0 {vd0:F4} · vd1 {vd1:F4}, 최대 내림 {Dd:F3}m (RootT.y −{sub:F4})");
+                    log.AppendLine($"{tag}: 아래로 — Receiver 중심 아래 {R}m 반경 {R} → vd0 {vd0:F4} · vd1 {vd1:F4}, 최대 내림 월드 {Dd:F3}m — 트리 가지 RootT.y −{sub:F4}(×{ScaleTreeMax})");
                 }
             }
+
+            // 바깥에 ScaleFactorInverse 트리: [바닥 앉기 @0, 높이 트리 @ScaleTreeMax] — 높이 트리를 쓰는 상태마다 갈아 끼운다(같은 트리는 같은 감싼 트리)
+            if (!ctrl.parameters.Any(p => p.name == ScaleParam)) ctrl.AddParameter(new AnimatorControllerParameter { name = ScaleParam, type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
+            var outer = downTrees.Count > 0 ? downTrees : trees;
+            var wrapped = new Dictionary<BlendTree, BlendTree>();
+            int states = 0;
+            foreach (var st in ctrl.layers.SelectMany(l => AllStates(l.stateMachine)))
+            {
+                if (!(st.motion is BlendTree inner) || !outer.Contains(inner)) continue;
+                if (!wrapped.TryGetValue(inner, out var w))
+                {
+                    w = new BlendTree { name = inner.name + " (Scale)", blendType = BlendTreeType.Simple1D, blendParameter = ScaleParam, useAutomaticThresholds = false, hideFlags = HideFlags.HideInHierarchy };
+                    w.children = new[]
+                    {
+                        new ChildMotion { motion = lowClip, threshold = 0f, timeScale = 1f },
+                        new ChildMotion { motion = inner, threshold = ScaleTreeMax, timeScale = 1f },
+                    };
+                    save(w);
+                    wrapped[inner] = w;
+                }
+                st.motion = w; EditorUtility.SetDirty(st); states++;
+            }
+            log.AppendLine($"{tag}: 크기 무관 — '{ScaleParam}' 트리로 감싼 상태 {states}개, Scaler {AnimationUtility.CalculateTransformPath(scaler, root)}(FX '{ScaleLayer}'가 크기를 맞춤)");
             return trees.Count;
+        }
+
+        // FX: 'WC_*HeightScaler'의 크기 = ScaleFactorInverse / sr (1D 트리 [크기 0 @0, ScaleTreeMax/sr @ScaleTreeMax] — 선형이라 정확)
+        public static bool AddHeightScaleLayer(AnimatorController fx, Transform root, System.Action<Object> save, StringBuilder log)
+        {
+            var scalers = root.GetComponentsInChildren<Transform>(true).Where(t => t.parent == root && t.name.StartsWith("WC_") && t.name.EndsWith("HeightScaler")).ToList();
+            if (scalers.Count == 0) { log.AppendLine("scale: Scaler 없음 — 건너뜀"); return false; }
+            float sr = Mathf.Max(1e-4f, root.lossyScale.x);
+            if (!fx.parameters.Any(p => p.name == ScaleParam)) fx.AddParameter(new AnimatorControllerParameter { name = ScaleParam, type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
+            AnimationClip Clip(string name, float s)
+            {
+                var c = new AnimationClip { name = name };
+                foreach (var t in scalers)
+                    foreach (var ax in new[] { "x", "y", "z" })
+                        AnimationUtility.SetEditorCurve(c, EditorCurveBinding.FloatCurve(t.name, typeof(Transform), "m_LocalScale." + ax), new AnimationCurve(new Keyframe(0, s), new Keyframe(1f / 60f, s)));
+                save(c);
+                return c;
+            }
+            var c0 = Clip("WC_HeightScale_0", 0f);
+            var c1 = Clip("WC_HeightScale_Max", ScaleTreeMax / sr);
+            var tree = new BlendTree { name = "Wheelchair Height Scale (ScaleFactorInverse)", blendType = BlendTreeType.Simple1D, blendParameter = ScaleParam, useAutomaticThresholds = false, hideFlags = HideFlags.HideInHierarchy };
+            tree.children = new[] { new ChildMotion { motion = c0, threshold = 0f, timeScale = 1f }, new ChildMotion { motion = c1, threshold = ScaleTreeMax, timeScale = 1f } };
+            save(tree);
+            fx.AddLayer(ScaleLayer);
+            var ls = fx.layers; ls[ls.Length - 1].defaultWeight = 1f; fx.layers = ls;
+            var sm = fx.layers[fx.layers.Length - 1].stateMachine;
+            if (!EditorUtility.IsPersistent(sm)) save(sm);
+            var st = sm.AddState("Scale");
+            st.motion = tree; st.writeDefaultValues = false;
+            sm.defaultState = st;
+            EditorUtility.SetDirty(fx);
+            log.AppendLine($"scale: FX '{ScaleLayer}' — {string.Join(", ", scalers.Select(t => t.name))} 크기 = {ScaleParam} ÷ {sr:F3}");
+            return true;
         }
 
         // 몸 올림 적용(fitB 다음, height 전): 휠체어 레이어의 앉기 클립 RootT.y, 골반 추종 오프셋(Seat), 풀 트래킹 센서 상자.

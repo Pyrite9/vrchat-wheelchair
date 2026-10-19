@@ -62,11 +62,13 @@ Expression Menu: Wheelchair · On / Off · Full Body Tracking · Rear Seat
 | | 日本語 | English | 한국어 |
 |---|---|---|---|
 | 01 | 座りポーズ（指はジェスチャーに追従） | Sitting pose for desktop and VR (fingers follow gestures) | 데스크톱·VR 앉기 자세(손가락은 제스처를 따라감) |
-| 02 | VR の高さ調整（Space Drag などで体と車椅子が一緒に上下） | VR height: a playspace mover (e.g. Space Drag) moves body and chair together | VR 높이: Space Drag 등으로 몸과 휠체어가 함께 위아래로 |
+| 02 | VR の高さ調整（Space Drag などで体と車椅子が一緒に上下・アバターの大きさに関係なく） | VR height: a playspace mover (e.g. Space Drag) moves body and chair together, at any avatar scale | VR 높이: Space Drag 등으로 몸과 휠체어가 함께 위아래로(아바타 크기와 상관없이) |
 | 03 | フルボディトラッキング（腰はトラッカー、座った脚は腰に追従） | Full-body tracking: hips follow the tracker, seated legs follow the hips | 풀바디 트래킹: 골반은 트래커, 앉은 다리는 골반을 따라감 |
 | 04 | フルトラッキングモード（背中・すねが当たると車椅子が下がる） | Full Body Tracking mode: the chair moves back when your back or shins push it | 풀 트래킹 모드: 등·정강이가 닿으면 휠체어가 뒤로 물러남 |
 | 05 | 移動に合わせて後輪・キャスターが回転 | Rear wheels and casters spin as you move | 이동에 맞춰 뒷바퀴·캐스터가 회전 |
 | 06 | 後部座席 | Rear Seat for other players | 뒷좌석 |
+| 07 | 座ったまま AFK（座ったままで、戻ると座り直す） | AFK while seated: stays seated and sits back down when you return | 앉은 채 AFK: 그대로 앉아 있고 돌아오면 다시 앉음 |
+| 08 | インスペクター（座った姿のプレビュー・最後のビルド・新バージョンのお知らせ） | Inspector: sitting preview, last build summary, update notice | 인스펙터: 앉은 모습 미리보기·마지막 빌드·새 버전 알림 |
 
 <p align="center"><img src="docs/images/05_features.jpg" width="720" alt="Features"></p>
 

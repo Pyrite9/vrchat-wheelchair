@@ -1,6 +1,6 @@
 # Pyrite9 Wheelchair (휠체어 기믹)
 
-버전 1.0.1 (2026-10-18)
+버전 1.0.2 (2026-10-19)
 
 VRChat 아바타용 휠체어 기믹입니다. 휴머노이드 아바타에 프리팹을 넣기만 하면 빌드할 때 그 아바타에 맞춰집니다.
 
@@ -54,11 +54,13 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 
 - 데스크톱·VR 앉은 자세, 손가락은 제스처를 따름
 - VR(헤드셋+컨트롤러): 플레이 공간 이동 도구(OVR Advanced Settings의 "Space Drag" 등)로 자신을 들어 올리면 앉은 자세 그대로 몸과 휠체어가 같이 올라감(평소 앉은 높이에서 약 2.5m까지).
-  현실 머리가 앉은 높이보다 내려가면 아래로도 따라감(최대 1m). 이때 휠체어가 바닥에 파묻히니 플레이 공간 이동 도구로 다시 올리세요
+  현실 머리가 앉은 높이보다 내려가면 아래로도 따라감(최대 1m). 이때 휠체어가 바닥에 파묻히니 플레이 공간 이동 도구로 다시 올리세요.
+  VRChat 아바타 크기 조절(퀵 메뉴에서 키 바꾸기)과 상관없이 동작합니다
 - VRChat 풀 바디 트래킹이 켜져 있고 메뉴의 풀 트래킹이 꺼져 있을 때: 골반은 골반 트래커를 따르고 앉은 다리·발이 골반을 따라감(위로 약 2.5m, 아래로 1m까지). 휠체어도 골반을 따라오니 플레이 공간 이동 도구로 같이 올라감. 앉는 높이는 실제 골반 트래커 위치라 현실에서 일어서면 몸과 휠체어가 뜸
 - 움직이면 뒷바퀴와 캐스터가 굴러감
 - 풀 트래킹 모드: 다리는 트래커를 따르고 휠체어는 골반을 따라옴. 등이나 정강이가 닿으면 휠체어가 뒤로 물러남
 - 뒷좌석: 휠체어 뒤에 다른 플레이어가 서는 자리
+- 앉은 채 AFK: 휠체어가 켜져 있으면 아바타 자체 AFK 모션 대신 그대로 앉아 있고, 돌아오면 다시 앉은 자세로. 휠체어를 끄면 아바타 자체 AFK가 평소대로 나옴
 
 ## 설정(프리팹 루트의 Wheelchair Root 컴포넌트)
 
@@ -71,6 +73,12 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 | Foot Height Offset | 미터. +는 위로 |
 | Foot Forward Offset | 미터. +는 앞으로 |
 
+인스펙터에는 이 밖에도 다음이 있습니다(문구는 Menu Language를 따라갑니다).
+
+- **앉은 모습 미리보기**: 지금 설정으로 아바타 사본을 빌드해 그 자리에 앉혀 보여 줍니다(몇 초). Scene 뷰에서만 보이고 씬에 저장되지 않으며, 끄면 원래대로 돌아갑니다. 보정값을 바꾼 뒤 **새로 고침**.
+- **마지막 빌드**: Play·업로드 때 정해진 휠체어 배율·몸 올림·경고. 빌드 로그와 README를 여는 버튼.
+- **버전**: 하루 한 번 GitHub에 최신 버전을 묻고, 새 버전이 있으면 알려 줍니다(아래 "주의").
+
 ## 문제 해결
 
 | Console 메시지(`[Pyrite9 Wheelchair] …`)·증상 | 할 일 |
@@ -82,6 +90,7 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 | `full-body sensor …`, `knee or foot bone …`, `contact sender or its bone …` not found | 풀 트래킹 밀어내기가 안 될 수 있습니다. 아바타의 휴머노이드 뼈 지정(가슴·다리·발)을 확인하세요. |
 | `WC_FBTOffset not found under Seat` | 풀 트래킹 밀어내기 거리가 고정된 채로 남습니다. 프리팹을 풀었거나(Unpack) 고친 경우입니다. `Wheelchair` 오브젝트를 지우고 프리팹을 다시 넣으세요. |
 | `… bone or 'Wheelchair Sit Height …' blend tree not found`, `unexpected 'Wheelchair Sit Height …' blend tree`, `sitting animation has no RootT.y curve` | VR 높이 따라가기(머리, 풀 바디 트래킹이면 골반)만 꺼집니다(나머지는 동작). 패키지를 다시 임포트하세요. |
+| `FX controller not found — height follow may break when the avatar is resized` | 아바타 크기를 바꾸면 VR 높이 따라가기가 안 될 수 있습니다. 아바타에 FX 레이어 컨트롤러를 지정하세요(빈 컨트롤러여도 됨). |
 | `Gesture controller not found` | 앉아 있는 동안 손가락이 제스처를 안 따를 수 있습니다. 아바타의 Gesture 레이어를 지정하세요(기본값 그대로도 됨). |
 | `no hand mask found for the gesture layers` | 앉아 있는 동안 아바타의 Gesture 레이어가 앉은 자세를 덮을 수 있습니다(웅크릴 때 등). 아바타 Gesture 컨트롤러의 첫 레이어에 손 마스크를 지정하세요. |
 | `… WheelchairRoot components found` | 휠체어는 아바타 하나에 하나만 쓰세요. 남는 것을 지우세요. |
@@ -98,6 +107,7 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 
 ## 변경 기록
 
+- **1.0.2** (2026-10-19): VR 높이 따라가기(Space Drag)가 VRChat 아바타 크기 조절과 상관없이 동작합니다(전에는 키를 키우면 다리가 펴졌습니다). 휠체어에 앉은 채 AFK면 그대로 앉아 있고 돌아오면 다시 앉습니다. 휠체어를 꺼 둔 동안 아바타 자체 AFK·이모트가 덮이던 것을 고쳤습니다. 인스펙터를 새로 만들었습니다(앉은 모습 미리보기·마지막 빌드·새 버전 알림).
 - **1.0.1** (2026-10-18): 풀 트래킹 밀어내기가 VRChat 아바타 크기 조절(퀵 메뉴에서 키 바꾸기)에 맞춰 줄어듭니다. 전에는 작게 해도 같은 거리만큼 밀려서 휠체어가 많이 움직였습니다.
 - **1.0.0** (2026-10-17): 첫 공개.
 
@@ -107,6 +117,7 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 - 앉은 자세에 **Action** 레이어를 씁니다. Action 레이어를 쓰는 다른 기믹과 충돌할 수 있습니다.
 - 앉아 있는 동안 손가락이 제스처를 따르도록 아바타의 Gesture 레이어를 Action 레이어에 복사합니다. Gesture 레이어에서처럼 손만 움직입니다.
 - GoGo Loco가 있으면 앉아 있는 동안 `Go/Action`을 켭니다.
+- Unity 에디터에서 휠체어 인스펙터를 열면 하루 한 번 GitHub(`api.github.com`)에 이 패키지의 최신 버전을 묻습니다. 보내는 정보는 없고, 버전 글자를 누르면 바로 다시 확인합니다.
 - 퍼포먼스: 메시 1, 삼각형 12,196, 머티리얼 1(lilToon), 메뉴 아이콘 4(256×256), PhysBone 0, Contact 11(그중 6개는 VR 머리·골반 높이를 재려고 빌드 때 추가), Station 1.
 
 ## 라이선스(요약 — 전문은 `LICENSE.txt`)
