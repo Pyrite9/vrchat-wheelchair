@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Pyrite9.Wheelchair
 {
     public enum MenuLanguage { English = 0, Japanese = 1, Korean = 2 }
-    public enum AfkMotion { Auto = 0, OneArm = 1, BothArms = 2 }
+    public enum AfkMotion { Auto = 0, OneArm = 1, BothArms = 2, Off = 3 }
     public enum AfkVanish { Dissolve = 0, Instant = 1 }
 
     [DisallowMultipleComponent]
@@ -32,10 +32,10 @@ namespace Pyrite9.Wheelchair
         [Tooltip("Footrest front/back adjustment (m). + forward (away from the body).")]
         public float footForwardOffset;
 
-        [Tooltip("Wheelchair AFK motion add-on only: how the avatar disappears. Dissolve fades out gradually; Instant disappears at once when the eyes close and reappears at once (for avatars whose clothes show their inside while dissolving). Applied at build time.")]
+        [Tooltip("AFK motion: how the avatar disappears. Dissolve fades out gradually; Instant disappears at once when the eyes close and reappears at once (for avatars whose clothes show their inside while dissolving). Applied at build time.")]
         public AfkVanish afkVanish = AfkVanish.Dissolve;
 
-        [Tooltip("Wheelchair AFK motion add-on only: which stretch to bake. Auto tries the one-arm stretch and switches to both arms (V) if an arm would go through the head. Re-bake after changing it.")]
+        [Tooltip("AFK motion while seated (made at build time): Off keeps you seated; Auto tries the one-arm stretch and switches to both arms (V) if an arm would go through the head.")]
         public AfkMotion afkMotion = AfkMotion.Auto;
     }
 }

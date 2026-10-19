@@ -1,6 +1,6 @@
 # Pyrite9 Wheelchair
 
-Version 1.0.2 (2026-10-19)
+Version 1.1.0 (2026-10-20)
 
 A wheelchair gimmick for VRChat avatars. Drop the prefab under any humanoid avatar — it fits itself to the avatar when you build.
 
@@ -62,7 +62,7 @@ Synced parameter cost: **3 bits**. Other parameters are internal (renamed automa
 - Wheels and casters spin with your movement
 - Full Body Tracking mode: legs follow your trackers, the chair follows your hips, and slides back when your back or shins push into it
 - Rear Seat: a standing spot behind the chair that other players can use
-- AFK while seated: with the wheelchair on, you stay seated instead of playing your avatar's own AFK animation, and sit back properly when you return. With the wheelchair off, your avatar's own AFK plays as usual
+- AFK motion while seated: when you go AFK in the chair, you stand up, stretch (one-arm stretch or both arms up, chosen to fit the avatar), walk away and disappear; when you return you reappear and sit back down. It is made at build time from your avatar's body, and the face (closing eyes, yawn, smile) uses the eyelid and lip-sync blend shapes of the VRC Avatar Descriptor plus common blend shape names. With the wheelchair off, your avatar's own AFK plays as usual
 
 ## Settings (Wheelchair Root component on the prefab root)
 
@@ -74,6 +74,8 @@ Synced parameter cost: **3 bits**. Other parameters are internal (renamed automa
 | Seat Height Offset | Meters, added to the automatic sitting height. + raises the body, - lowers it |
 | Foot Height Offset | Meters. + up |
 | Foot Forward Offset | Meters. + forward |
+| AFK Motion | Off / **Auto** (default) / One-arm / Both arms (V). Auto tries the one-arm stretch and switches to both arms if an arm would go through the head. Off keeps you seated while AFK |
+| AFK Vanish | **Dissolve** (default, gradual) / Instant (disappears at once the moment the eyes close and reappears at once — for avatars whose clothes show their inside while dissolving) |
 
 The inspector also has (its text follows Menu Language):
 
@@ -93,6 +95,9 @@ The inspector also has (its text follows Menu Language):
 | `WC_FBTOffset not found under Seat` | Full Body Tracking push-back keeps a fixed distance. The prefab was probably unpacked or edited — delete the `Wheelchair` object and drag the prefab in again. |
 | `… bone or 'Wheelchair Sit Height …' blend tree not found`, `unexpected 'Wheelchair Sit Height …' blend tree`, `sitting animation has no RootT.y curve` | VR height follow (by the head, or by the hips with full-body tracking) is skipped; everything else works. Import the package again. |
 | `FX controller not found — height follow may break when the avatar is resized` | VR height following may stop working when the avatar is resized. Assign an FX layer controller to the avatar (an empty one is fine). |
+| `AFK motion could not be made — …` | You just stay seated while AFK (everything else works). Check the reason in parentheses and that the avatar's FBX (Rig: Humanoid) is in the project. |
+| `the AFK stretch arm goes … into the head` | The stretching arm sinks into the head. Pick another **AFK Motion** in the inspector (e.g. Both arms). |
+| `the wheelchair root has no VRC Parent Constraint` | The chair may follow your body while AFK. Drag the prefab in again. |
 | `Gesture controller not found` | Fingers may stop following gestures while seated. Set a Gesture layer on the avatar descriptor (or leave it as default). |
 | `no hand mask found for the gesture layers` | A Gesture layer of your avatar may override the sitting pose while seated (e.g. when crouching). Give the first layer of the avatar's Gesture controller a hand mask. |
 | `… WheelchairRoot components found` | Use only one wheelchair per avatar. Remove the extra one. |
@@ -109,6 +114,7 @@ The inspector also has (its text follows Menu Language):
 
 ## Changelog
 
+- **1.1.0** (2026-10-20): AFK motion while seated — stand up, stretch, walk away and disappear; sit back down when you return (made for each avatar at build time; inspector: Off / Auto / One-arm / Both arms, vanish Dissolve / Instant). Works in Full Body Tracking mode too.
 - **1.0.2** (2026-10-19): VR height following (Space Drag) now works at any VRChat avatar scale (before, scaling the avatar up straightened the legs). AFK while seated keeps you seated and sits you back down when you return. Fixed your avatar's own AFK and emotes being covered while the wheelchair is off. New inspector (sitting preview, last build, update notice).
 - **1.0.1** (2026-10-18): Full Body Tracking push-back now scales with VRChat avatar scaling (changing your height in the Quick Menu). Before, a smaller avatar pushed the chair the same distance and it moved too far.
 - **1.0.0** (2026-10-17): First release.
@@ -119,8 +125,9 @@ The inspector also has (its text follows Menu Language):
 - Uses the **Action** layer for the sitting pose. Other gimmicks that also use the Action layer may conflict.
 - While seated, your avatar's Gesture layers are copied into the Action layer so the fingers keep following your gestures. Like in the Gesture layer, they only move the hands.
 - If GoGo Loco is installed, `Go/Action` is set while seated.
+- The AFK motion is made for your avatar at build time (builds take a few seconds longer). Dissolve works on lilToon materials; other shaders disappear at once partway through. If no face blend shapes are found, only the body moves.
 - When you open the wheelchair inspector in the Unity Editor, it asks GitHub (`api.github.com`) for this package's latest version once a day. Nothing is sent; click the version text to check again right away.
-- Performance: 1 mesh, 12,196 triangles, 1 material (lilToon), 4 menu icons (256×256), 0 PhysBones, 11 Contacts (6 are added at build time to measure head and hip height in VR), 1 Station.
+- Performance: 1 mesh, 12,196 triangles, 1 material (lilToon), 4 menu icons (256×256), 0 PhysBones, 11 Contacts (6 are added at build time to measure head and hip height in VR), 1 Station. AFK motion: 2 Action layers, 3–4 FX layers, and copies of materials used only while disappearing (made at build time).
 
 ## License (summary — the full text is in `LICENSE.txt`)
 

@@ -1,6 +1,6 @@
 # Pyrite9 Wheelchair (휠체어 기믹)
 
-버전 1.0.2 (2026-10-19)
+버전 1.1.0 (2026-10-20)
 
 VRChat 아바타용 휠체어 기믹입니다. 휴머노이드 아바타에 프리팹을 넣기만 하면 빌드할 때 그 아바타에 맞춰집니다.
 
@@ -60,7 +60,7 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 - 움직이면 뒷바퀴와 캐스터가 굴러감
 - 풀 트래킹 모드: 다리는 트래커를 따르고 휠체어는 골반을 따라옴. 등이나 정강이가 닿으면 휠체어가 뒤로 물러남
 - 뒷좌석: 휠체어 뒤에 다른 플레이어가 서는 자리
-- 앉은 채 AFK: 휠체어가 켜져 있으면 아바타 자체 AFK 모션 대신 그대로 앉아 있고, 돌아오면 다시 앉은 자세로. 휠체어를 끄면 아바타 자체 AFK가 평소대로 나옴
+- 앉은 채 AFK 모션: 휠체어에 앉은 채 AFK가 되면 일어나 기지개를 켜고(아바타에 맞춰 한쪽 기지개 또는 V자 만세) 걸어가며 사라지고, 돌아오면 다시 나타나 앉음. 빌드할 때 그 아바타의 몸을 재서 만들고, 표정(눈 감기·하품·웃음)은 VRC Avatar Descriptor의 눈꺼풀·립싱크 셰이프키와 흔한 이름으로 자동으로 찾음. 휠체어를 끄면 아바타 자체 AFK가 평소대로 나옴
 
 ## 설정(프리팹 루트의 Wheelchair Root 컴포넌트)
 
@@ -72,6 +72,8 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 | Seat Height Offset | 미터. 자동으로 정한 앉는 높이에 더함. +는 몸을 위로, -는 아래로 |
 | Foot Height Offset | 미터. +는 위로 |
 | Foot Forward Offset | 미터. +는 앞으로 |
+| AFK Motion | 끔 / **자동**(기본) / 한쪽 기지개 / V자 만세. 자동은 한쪽 기지개를 먼저 해 보고 팔이 머리를 뚫으면 V자 만세로 바꿈. 끔이면 AFK 동안 그대로 앉아 있음 |
+| AFK Vanish | **디졸브**(기본, 서서히) / 즉시(눈을 감는 순간 한 번에 사라지고 한 번에 나타남 — 디졸브 동안 옷 안쪽이 비쳐 보이는 아바타용) |
 
 인스펙터에는 이 밖에도 다음이 있습니다(문구는 Menu Language를 따라갑니다).
 
@@ -91,6 +93,9 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 | `WC_FBTOffset not found under Seat` | 풀 트래킹 밀어내기 거리가 고정된 채로 남습니다. 프리팹을 풀었거나(Unpack) 고친 경우입니다. `Wheelchair` 오브젝트를 지우고 프리팹을 다시 넣으세요. |
 | `… bone or 'Wheelchair Sit Height …' blend tree not found`, `unexpected 'Wheelchair Sit Height …' blend tree`, `sitting animation has no RootT.y curve` | VR 높이 따라가기(머리, 풀 바디 트래킹이면 골반)만 꺼집니다(나머지는 동작). 패키지를 다시 임포트하세요. |
 | `FX controller not found — height follow may break when the avatar is resized` | 아바타 크기를 바꾸면 VR 높이 따라가기가 안 될 수 있습니다. 아바타에 FX 레이어 컨트롤러를 지정하세요(빈 컨트롤러여도 됨). |
+| `AFK motion could not be made — …` | AFK 동안 그대로 앉아 있습니다(나머지는 동작). 괄호 안 이유를 보고, 아바타 FBX(Rig: Humanoid)가 프로젝트에 있는지 확인하세요. |
+| `the AFK stretch arm goes … into the head` | 기지개 팔이 머리에 묻힙니다. 인스펙터 **AFK Motion**에서 다른 모션(V자 만세 등)을 고르세요. |
+| `the wheelchair root has no VRC Parent Constraint` | AFK 동안 휠체어가 몸을 따라갈 수 있습니다. 프리팹을 다시 넣으세요. |
 | `Gesture controller not found` | 앉아 있는 동안 손가락이 제스처를 안 따를 수 있습니다. 아바타의 Gesture 레이어를 지정하세요(기본값 그대로도 됨). |
 | `no hand mask found for the gesture layers` | 앉아 있는 동안 아바타의 Gesture 레이어가 앉은 자세를 덮을 수 있습니다(웅크릴 때 등). 아바타 Gesture 컨트롤러의 첫 레이어에 손 마스크를 지정하세요. |
 | `… WheelchairRoot components found` | 휠체어는 아바타 하나에 하나만 쓰세요. 남는 것을 지우세요. |
@@ -107,6 +112,7 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 
 ## 변경 기록
 
+- **1.1.0** (2026-10-20): 앉은 채 AFK 모션 — 일어나 기지개를 켜고 걸어가며 사라지고, 돌아오면 다시 앉습니다(빌드 때 아바타마다 만듦, 인스펙터에서 끔·자동·한쪽 기지개·V자 만세, 사라지기는 디졸브·즉시). 휠체어 풀 트래킹 모드에서도 동작합니다.
 - **1.0.2** (2026-10-19): VR 높이 따라가기(Space Drag)가 VRChat 아바타 크기 조절과 상관없이 동작합니다(전에는 키를 키우면 다리가 펴졌습니다). 휠체어에 앉은 채 AFK면 그대로 앉아 있고 돌아오면 다시 앉습니다. 휠체어를 꺼 둔 동안 아바타 자체 AFK·이모트가 덮이던 것을 고쳤습니다. 인스펙터를 새로 만들었습니다(앉은 모습 미리보기·마지막 빌드·새 버전 알림).
 - **1.0.1** (2026-10-18): 풀 트래킹 밀어내기가 VRChat 아바타 크기 조절(퀵 메뉴에서 키 바꾸기)에 맞춰 줄어듭니다. 전에는 작게 해도 같은 거리만큼 밀려서 휠체어가 많이 움직였습니다.
 - **1.0.0** (2026-10-17): 첫 공개.
@@ -117,8 +123,9 @@ English: `README_en.md` / 日本語: `README_jp.md` / 라이선스: `LICENSE.txt
 - 앉은 자세에 **Action** 레이어를 씁니다. Action 레이어를 쓰는 다른 기믹과 충돌할 수 있습니다.
 - 앉아 있는 동안 손가락이 제스처를 따르도록 아바타의 Gesture 레이어를 Action 레이어에 복사합니다. Gesture 레이어에서처럼 손만 움직입니다.
 - GoGo Loco가 있으면 앉아 있는 동안 `Go/Action`을 켭니다.
+- AFK 모션은 빌드할 때 그 아바타에 맞춰 만듭니다(빌드가 몇 초 늘어납니다). 디졸브는 lilToon 머티리얼만 되고, 그 밖의 셰이더는 사라지는 도중에 한 번에 숨깁니다. 표정 키를 못 찾으면 표정 없이 몸만 움직입니다.
 - Unity 에디터에서 휠체어 인스펙터를 열면 하루 한 번 GitHub(`api.github.com`)에 이 패키지의 최신 버전을 묻습니다. 보내는 정보는 없고, 버전 글자를 누르면 바로 다시 확인합니다.
-- 퍼포먼스: 메시 1, 삼각형 12,196, 머티리얼 1(lilToon), 메뉴 아이콘 4(256×256), PhysBone 0, Contact 11(그중 6개는 VR 머리·골반 높이를 재려고 빌드 때 추가), Station 1.
+- 퍼포먼스: 메시 1, 삼각형 12,196, 머티리얼 1(lilToon), 메뉴 아이콘 4(256×256), PhysBone 0, Contact 11(그중 6개는 VR 머리·골반 높이를 재려고 빌드 때 추가), Station 1. AFK 모션: Action 레이어 2, FX 레이어 3~4, 사라지는 동안만 쓰는 사본 머티리얼(빌드 때 생성).
 
 ## 라이선스(요약 — 전문은 `LICENSE.txt`)
 

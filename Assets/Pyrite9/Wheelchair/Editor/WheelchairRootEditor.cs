@@ -1,6 +1,6 @@
 // Pyrite9 Wheelchair — WheelchairRoot 인스펙터(UI Toolkit, 디자인 'Assay': 어두운 바탕 + 파이라이트 금색 포인트)
 //   소개·기능(접기) · 앉은 모습 미리보기(WcSitPreview) · 01 기본(메뉴 언어·자동 맞춤) · 02 미세 조정(게이지 + 값, ±0.10 m 게이지는 끌어서도 바꿈, 두 번 누르면 0)
-//   · [AFK — AFK 모션 모듈이 있을 때만: 페이드 때 검게] · 마지막 빌드(WcBuildRecord) · 변경 기록(접기 — 이 버전 한 줄, 글은 README 3종 '변경 기록' 절에서 읽음). 접힘 상태는 EditorPrefs(사용자별)
+//   · AFK(모션 끔/자동/한쪽/V · 사라지기 디졸브/즉시) · 마지막 빌드(WcBuildRecord) · 변경 기록(접기 — 이 버전 한 줄, 글은 README 3종 '변경 기록' 절에서 읽음). 접힘 상태는 EditorPrefs(사용자별)
 //   문구는 메뉴 언어를 따라간다. 칸 툴팁 앞머리에 README가 쓰는 영어 이름(Seat Height Offset 등)을 붙인다.
 //   스타일 WheelchairInspector.uss(이 스크립트 옆) — 못 찾아도 동작은 같다(모양만 Unity 기본).
 #if UNITY_EDITOR
@@ -75,11 +75,8 @@ namespace Pyrite9.Wheelchair
             body.Add(BasicSection());
             body.Add(Divider());
             body.Add(OffsetSection());
-            if (HasAfkModule())
-            {
-                body.Add(Divider());
-                body.Add(AfkSection());
-            }
+            body.Add(Divider());
+            body.Add(AfkSection());
             body.Add(Divider());
             body.Add(BuildSection());
             body.Add(Divider());
@@ -175,9 +172,9 @@ namespace Pyrite9.Wheelchair
             new[] { "Rolling wheels and casters, rear seat for a passenger",
                     "後輪・キャスターが回る。後ろに人を乗せられる",
                     "뒷바퀴·캐스터가 굴러감. 뒷좌석에 다른 사람 태우기" },
-            new[] { "AFK while seated — you stay seated and sit back down when you return",
-                    "座ったまま AFK — そのまま座っていて、戻ると座り直す",
-                    "앉은 채 AFK — 그대로 앉아 있고, 돌아오면 다시 앉음" },
+            new[] { "AFK while seated — stand up, stretch, walk away and disappear; sit back down when you return (made for each avatar at build time)",
+                    "座ったまま AFK — 立ち上がって伸びをし、歩いて消える。戻ると座り直す（ビルド時にアバターごとに作る）",
+                    "앉은 채 AFK — 일어나 기지개 켜고 걸어가 사라짐, 돌아오면 다시 앉음(빌드 때 아바타마다 만듦)" },
         };
 
         VisualElement AboutSection()
@@ -378,26 +375,10 @@ namespace Pyrite9.Wheelchair
             return box;
         }
 
-        // ---------------------------------------------------------------- AFK (AFK 모션 모듈이 있을 때만)
-        // 모듈 = 아바타 안 MA Merge Animator 중 'Wheelchair AFK Fade' 레이어가 있는 컨트롤러(배포판 밖 개발용 — 나중에 배포판으로 옮기면 그대로 이 칸)
-        bool HasAfkModule()
-        {
-            var desc = ((Component)target).GetComponentInParent<VRCAvatarDescriptor>(true);
-            if (desc == null) return false;
-            var tMerge = System.AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("nadena.dev.modular_avatar.core.ModularAvatarMergeAnimator")).FirstOrDefault(x => x != null);
-            if (tMerge == null) return false;
-            foreach (var c in desc.GetComponentsInChildren(tMerge, true))
-            {
-                var ac = new SerializedObject(c).FindProperty("animator")?.objectReferenceValue as UnityEditor.Animations.AnimatorController;
-                if (ac != null && ac.layers.Any(l => l.name == "Wheelchair AFK Fade")) return true;
-            }
-            return false;
-        }
-
-        const string AfkBakeMenu = "Tools/Pyrite9 AFK/2. 모션 굽기 (Play 빌드 → 굽기 → Play 종료)";   // AFK 모션 모듈(배포판 밖)의 메뉴 — 없으면 버튼 없음
-
+        // ---------------------------------------------------------------- AFK(앉은 채 AFK 모션 — 빌드 때 굽는다, 9-56)
         string MotionName(int m) => m == (int)AfkMotion.BothArms ? T(lang, "Both arms (V)", "両腕バンザイ（V）", "V자 만세")
-            : m == (int)AfkMotion.OneArm ? T(lang, "One-arm stretch", "片腕の伸び", "한쪽 기지개") : T(lang, "Auto", "自動", "자동");
+            : m == (int)AfkMotion.OneArm ? T(lang, "One-arm", "片腕の伸び", "한쪽 기지개")
+            : m == (int)AfkMotion.Off ? T(lang, "Off", "オフ", "끔") : T(lang, "Auto", "自動", "자동");
 
         VisualElement AfkSection()
         {
@@ -405,59 +386,52 @@ namespace Pyrite9.Wheelchair
             var grid = new VisualElement(); grid.AddToClassList("wc-rows");
             sec.Add(grid);
 
-            // 모션: 자동 / 한쪽 기지개 / V자 만세
+            // 모션: 끔 / 자동 / 한쪽 기지개 / V자 만세
             var prop = serializedObject.FindProperty("afkMotion");
             int cur = prop != null ? prop.intValue : 0;
             var seg = new VisualElement(); seg.AddToClassList("wc-seg");
-            for (int i = 0; i < 3; i++)
+            int[] order = { (int)AfkMotion.Off, (int)AfkMotion.Auto, (int)AfkMotion.OneArm, (int)AfkMotion.BothArms };
+            for (int i = 0; i < order.Length; i++)
             {
-                int v = i;
+                int v = order[i];
                 var b = new Button(() =>
                 {
                     var p = serializedObject.FindProperty("afkMotion");
                     p.intValue = v;
                     serializedObject.ApplyModifiedProperties();
                     Build();
-                }) { text = MotionName(i) };
+                }) { text = MotionName(v) };
                 b.AddToClassList("wc-seg__item");
                 if (i == 0) b.AddToClassList("wc-seg__item--first");
-                if (i == cur) b.AddToClassList("wc-seg__item--on");
+                if (v == cur) b.AddToClassList("wc-seg__item--on");
                 seg.Add(b);
             }
             grid.Add(Row(T(lang, "Motion", "モーション", "모션"),
-                "AFK Motion — " + T(lang, "Auto bakes the one-arm stretch and switches to both arms (V) if an arm would go through the head.",
-                    "自動：片腕の伸びで焼いてみて、腕が頭を突き抜けるなら両腕（V）に切り替え。",
-                    "자동: 한쪽 기지개로 구워 보고, 팔이 머리를 뚫으면 V자 만세로 바꿈."), seg));
+                "AFK Motion — " + T(lang, "While seated and AFK: stand up, stretch, walk away and disappear; sit back down when you return. Made at build time.",
+                    "座ったまま AFK になると、立ち上がって伸びをし、歩いて消えます。戻ると座り直します。ビルド時に作ります。",
+                    "앉은 채 AFK가 되면 일어나 기지개를 켜고 걸어가 사라지고, 돌아오면 다시 앉습니다. 빌드 때 만듭니다."), seg));
             if (cur == (int)AfkMotion.Auto)
                 sec.Add(Label(T(lang,
-                    "Auto: the bake first tries the one-arm stretch and measures the closest gap between the arms and the head. If an arm would go into the head (gap below 0), it bakes both arms (V) instead. Avatars with a large head or short arms usually get V.",
-                    "自動：焼くときにまず片腕の伸びを試し、腕と頭のいちばん近い間隔を測ります。腕が頭にめり込む（間隔が0未満）なら両腕バンザイ（V）で焼き直します。頭が大きい・腕が短いアバターはたいていVになります。",
-                    "자동: 구울 때 한쪽 기지개를 먼저 해 보고 팔과 머리 사이 가장 가까운 간격을 잽니다. 팔이 머리 속으로 들어가면(간격 0 미만) V자 만세로 다시 굽습니다. 머리가 크거나 팔이 짧은 아바타는 대개 V자 만세가 됩니다."), "wc-note wc-note--gap"));
+                    "Auto: the build first tries the one-arm stretch and measures the closest gap between the arms and the head. If an arm would go into the head (gap below 0), it uses both arms (V) instead. Avatars with a large head or short arms usually get V.",
+                    "自動：ビルド時にまず片腕の伸びを試し、腕と頭のいちばん近い間隔を測ります。腕が頭にめり込む（間隔が0未満）なら両腕バンザイ（V）にします。頭が大きい・腕が短いアバターはたいていVになります。",
+                    "자동: 빌드할 때 한쪽 기지개를 먼저 해 보고 팔과 머리 사이 가장 가까운 간격을 잽니다. 팔이 머리 속으로 들어가면(간격 0 미만) V자 만세로 바꿉니다. 머리가 크거나 팔이 짧은 아바타는 대개 V자 만세가 됩니다."), "wc-note wc-note--gap"));
+            else if (cur == (int)AfkMotion.Off)
+                sec.Add(Label(T(lang, "Off: while AFK you just stay seated.", "オフ：AFK の間は座ったままです。", "끔: AFK 동안 그대로 앉아 있습니다."), "wc-note wc-note--gap"));
 
-            // 마지막 굽기
+            // 마지막 빌드에서 만든 것(WcAfkBakeRecord — 빌드의 afkmotion 패스가 쓴다)
             var desc = ((Component)target).GetComponentInParent<VRCAvatarDescriptor>(true);
             var rec = desc != null ? WcAfkBakeRecord.Get(desc.gameObject.name) : null;
-            string baked;
-            bool needBake = rec == null || rec.setting != cur;
-            if (rec == null) baked = T(lang, "not baked with this setting yet", "この設定ではまだ焼いていません", "이 설정으로는 아직 안 구움");
-            else
+            if (rec != null)
             {
-                baked = MotionName(rec.motion);
+                string baked = MotionName(rec.motion);
                 if (rec.setting == (int)AfkMotion.Auto && rec.motion == (int)AfkMotion.BothArms && rec.oneArmGap < 100f)
                     baked += T(lang, $"  (auto · one-arm {rec.oneArmGap * 100f:+0.0;-0.0} cm)", $"（自動・片腕 {rec.oneArmGap * 100f:+0.0;-0.0} cm）", $"  (자동 · 한쪽 {rec.oneArmGap * 100f:+0.0;-0.0} cm)");
                 else if (rec.setting == (int)AfkMotion.Auto) baked += T(lang, "  (auto)", "（自動）", "  (자동)");
                 baked += " · " + ShortTime(rec.time);
-            }
-            grid.Add(Fact(T(lang, "Last bake", "前回の焼き", "마지막 굽기"), baked, needBake ? "wc-fact__value--gold" : null));
-            if (needBake && rec != null)
-                sec.Add(Label(T(lang, "The motion setting changed — re-bake to apply it.", "モーション設定が変わりました。焼き直すと反映されます。", "모션 설정이 바뀌었습니다. 다시 구우면 반영됩니다."), "wc-note"));
-            if (needBake)
-            {
-                var bake = new Button(() => EditorApplication.ExecuteMenuItem(AfkBakeMenu)) { text = T(lang, "Re-bake (Play)", "焼き直す（Play）", "다시 굽기 (Play)") };
-                bake.AddToClassList("wc-button");
-                bake.SetEnabled(!EditorApplication.isPlaying);
-                var bs = new VisualElement(); bs.AddToClassList("wc-buttons"); bs.Add(bake);
-                sec.Add(bs);
+                bool changed = rec.setting != cur && cur != (int)AfkMotion.Off;
+                grid.Add(Fact(T(lang, "Last build", "前回のビルド", "마지막 빌드"), baked, changed ? "wc-fact__value--gold" : null));
+                if (changed)
+                    sec.Add(Label(T(lang, "Changed — applied at the next Play or upload.", "変更しました。次の Play・アップロードで反映されます。", "바뀌었습니다. 다음 Play·업로드 때 반영됩니다."), "wc-note wc-note--gap"));
             }
 
             // 사라지기: 디졸브 / 즉시

@@ -67,7 +67,7 @@ Expression Menu: Wheelchair · On / Off · Full Body Tracking · Rear Seat
 | 04 | フルトラッキングモード（背中・すねが当たると車椅子が下がる） | Full Body Tracking mode: the chair moves back when your back or shins push it | 풀 트래킹 모드: 등·정강이가 닿으면 휠체어가 뒤로 물러남 |
 | 05 | 移動に合わせて後輪・キャスターが回転 | Rear wheels and casters spin as you move | 이동에 맞춰 뒷바퀴·캐스터가 회전 |
 | 06 | 後部座席 | Rear Seat for other players | 뒷좌석 |
-| 07 | 座ったまま AFK（座ったままで、戻ると座り直す） | AFK while seated: stays seated and sits back down when you return | 앉은 채 AFK: 그대로 앉아 있고 돌아오면 다시 앉음 |
+| 07 | 座ったまま AFK モーション（立ち上がって伸び・歩いて消える、戻ると座り直す — ビルド時にアバターごとに作成） | AFK motion while seated: stand up, stretch, walk away and disappear; sit back down when you return (made for each avatar at build time) | 앉은 채 AFK 모션: 일어나 기지개 켜고 걸어가 사라짐, 돌아오면 다시 앉음(빌드 때 아바타마다 만듦) |
 | 08 | インスペクター（座った姿のプレビュー・最後のビルド・新バージョンのお知らせ） | Inspector: sitting preview, last build summary, update notice | 인스펙터: 앉은 모습 미리보기·마지막 빌드·새 버전 알림 |
 
 <p align="center"><img src="docs/images/05_features.jpg" width="720" alt="Features"></p>

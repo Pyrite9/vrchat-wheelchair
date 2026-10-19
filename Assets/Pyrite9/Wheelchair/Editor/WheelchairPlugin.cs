@@ -18,6 +18,8 @@
 //               아바타 자체 AFK(Action·FX 레이어의 AFK 진입 전이)는 휠체어가 켜져 있으면 안 들어가게,
 //               휠체어 Action 레이어의 빈 상태는 WD on(휠체어를 끄면 아바타 자체 AFK·이모트를 덮지 않게),
 //               AFK 모션 모듈이 있으면 인스펙터 'AFK ▸ 사라지기(디졸브/즉시)'를 FX 파라미터 기본값으로(WheelchairAfk)
+//     afkmotion : 앉은 채 AFK 모션(인스펙터 'AFK ▸ 모션', 기본 자동) — 이 아바타를 재서 일어나 기지개 켜고 걸어가 사라지는 클립을 굽고(WcAfkMotion,
+//               표정 키는 Descriptor에서 WcAfkFaceMap) Action·FX에 레이어를 붙인다(WcAfkLayers). 끔이거나 이미 AFK 모듈이 있으면 건너뜀
 //     marker  : 마커 제거
 //   로그 Logs/Pyrite9_Wheelchair_build.txt — 프로젝트에 Logs/가 있을 때만. WARN 줄은 받는 사람 콘솔에도 경고로 뜨므로 영어로 쓴다(EXCEPTION은 LogException)
 #if UNITY_EDITOR
@@ -66,6 +68,7 @@ namespace Pyrite9.Wheelchair
                 .Then.Run("Full-body sit height follows hips", ctx => Guard(ctx, "hip", HipHeight))
                 .Then.Run("Height follow works at any avatar scale", ctx => Guard(ctx, "scale", HeightScale))
                 .Then.Run("AFK while seated", ctx => Guard(ctx, "afk", Afk))
+                .Then.Run("AFK motion", ctx => Guard(ctx, "afkmotion", AfkMotionPass))
                 .Then.Run("Remove marker", ctx => Guard(ctx, "marker", RemoveMarkers));
         }
 
@@ -321,6 +324,43 @@ namespace Pyrite9.Wheelchair
                 WheelchairAfk.SetVanish(fx, mark != null && mark.afkVanish == AfkVanish.Instant, Log);
             }
             else Log.AppendLine("afk: FX 없음 또는 빌드용 복제본 아님 — FX 쪽 AFK 막기 건너뜀");
+        }
+
+        // 앉은 채 AFK 모션(9-56): 굽기 → Action·FX 레이어. 실패해도 빌드는 계속(WARN)
+        static void AfkMotionPass(BuildContext ctx)
+        {
+            ctx.DeactivateExtensionContext<AnimatorServicesContext>();
+            var root = ctx.AvatarRootTransform;
+            var holder = FindHolder(root);
+            var mark = holder.GetComponent<WheelchairRoot>();
+            var setting = mark != null ? mark.afkMotion : AfkMotion.Auto;
+            if (setting == AfkMotion.Off) { Log.AppendLine("afkmotion: 끔(인스펙터) — 건너뜀"); return; }
+            var desc = ctx.AvatarRootObject.GetComponent<VRCAvatarDescriptor>();
+            var act = desc.baseAnimationLayers.FirstOrDefault(l => l.type == VRCAvatarDescriptor.AnimLayerType.Action).animatorController as AnimatorController;
+            var fx = desc.baseAnimationLayers.FirstOrDefault(l => l.type == VRCAvatarDescriptor.AnimLayerType.FX).animatorController as AnimatorController;
+            if (act == null || !ctx.IsTemporaryAsset(act) || fx == null || !ctx.IsTemporaryAsset(fx)) { Log.AppendLine("afkmotion: WARN Action/FX controller not found — AFK motion skipped"); return; }
+            if (WcAfkLayers.HasOtherAfk(act)) { Log.AppendLine("afkmotion: 아바타에 AFK 모션 모듈이 이미 있음(Wheelchair AFK·WheelchairPlus AFK 레이어) — 건너뜀"); return; }
+            var anim = root.GetComponent<Animator>();
+            if (anim == null || !anim.isHuman) { Log.AppendLine("afkmotion: WARN the avatar is not humanoid — AFK motion skipped"); return; }
+            var t0 = System.DateTime.Now;
+            try
+            {
+                var faces = WcAfkFaceMap.From(desc, root, Log);
+                var res = WcAfkMotion.Bake(root, setting, faces, o => SaveNew(ctx, o), Log);
+                WcAfkLayers.AddAction(act, res, res.Face != null, o => SaveNew(ctx, o), Log);
+                WcAfkLayers.AddFx(fx, root, holder, res, mark != null ? mark.afkVanish : AfkVanish.Dissolve, o => SaveNew(ctx, o), Log);
+                WcAfkBakeRecord.Put(new WcAfkBakeRecord.Entry
+                {
+                    avatar = ctx.AvatarRootObject.name, time = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    setting = (int)setting, motion = (int)res.Motion, oneArmGap = res.OneArmGap, gap = res.HeadGap,
+                });
+                Log.AppendLine($"afkmotion: 끝 — {(System.DateTime.Now - t0).TotalSeconds:F1}초");
+            }
+            catch (System.Exception e)
+            {
+                Log.AppendLine("afkmotion: WARN AFK motion could not be made — the avatar just stays seated while AFK (" + e.Message + ")");
+                Log.AppendLine("afkmotion: " + e);
+            }
         }
 
         // 크기 무관(9-53): FX 레이어가 높이 Receiver의 Scaler 크기를 ScaleFactorInverse에 맞춘다 (WheelchairFit.AddHeightScaleLayer)
