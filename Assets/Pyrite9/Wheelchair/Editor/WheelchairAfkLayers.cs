@@ -7,7 +7,10 @@
 //   FX 'Wheelchair AFK Face'      : AFK 얼굴 → 풀리면 Reset(표정 키를 빌드 기본값으로 0.1초) → Off
 //   FX 'Wheelchair AFK Fade'      : 사라지기 — 디졸브(사본 머티리얼로 바꿔 끼우고 _AlphaMaskValue 1 → 0) 또는 즉시(눈이 다 감기는 순간)
 //   🔴 WD off(FX) 레이어는 지나간 값을 붙잡는다 → Off·빈 상태는 커브 없는 빈 클립. 머티리얼·알파·표정·IsActive는 지나가는 상태에서만 쓰고,
-//      끝에 원래 값을 한 번 써 둔다(아바타 자체 머티리얼 바꾸기·표정 레이어를 막지 않게). Action은 WD on(빈 상태가 휴머노이드를 덮지 않게)
+//      끝에 원래 값을 한 번 써 둔다. Action은 WD on(빈 상태가 휴머노이드를 덮지 않게)
+//   🔴 빈 클립이어도 FX 맨 끝 weight 1 레이어는 자기 키(표정·머티리얼)를 붙잡아 아바타 제스처 표정·머티리얼 토글을 덮었다
+//      (1.1.0, 넣기만 해도 표정이 죽음 — AFK Motion 끔으로 풀림, 사용자 신고 10-22)
+//      → FX AFK 레이어는 기본 weight 0, AFK에 들어가는 상태에서 1, Off에 돌아오면 0(VRCAnimatorLayerControl — 인덱스는 NDMF가 뒤 패스에서도 맞춰 줌)
 //   lilToon(알파 마스크 있는 것)은 Cutout+Dither 사본으로 디졸브, 그 밖(Poiyomi·lilToon Lite/Multi·FakeShadow 등)은 페이드 중간에 한 번에 숨김
 #if UNITY_EDITOR
 using System;
@@ -52,14 +55,26 @@ namespace Pyrite9.Wheelchair
             else t.AddCondition(on ? AnimatorConditionMode.Greater : AnimatorConditionMode.Less, 0.5f, p.name);
         }
 
-        static AnimatorStateMachine Layer(Ctx c, string name)
+        static AnimatorStateMachine Layer(Ctx c, string name, float weight = 1f)
         {
             var sm = new AnimatorStateMachine { name = name, hideFlags = HideFlags.HideInHierarchy };
             c.Save(sm);
             var ls = c.Ac.layers.ToList();
-            ls.Add(new AnimatorControllerLayer { name = name, stateMachine = sm, defaultWeight = 1f });
+            ls.Add(new AnimatorControllerLayer { name = name, stateMachine = sm, defaultWeight = weight });
             c.Ac.layers = ls.ToArray();
             return sm;
+        }
+
+        // FX AFK 레이어: 평소 weight 0(아바타 표정·머티리얼을 안 덮게) — on 상태에 들어가면 1, off 상태에 들어가면 0
+        static void FxGate(Ctx c, string layer, AnimatorState on, AnimatorState off)
+        {
+            int idx = Array.FindIndex(c.Ac.layers, l => l.name == layer);
+            foreach (var (s, w) in new[] { (on, 1f), (off, 0f) })
+            {
+                var b = s.AddStateMachineBehaviour<VRCAnimatorLayerControl>();
+                if (!EditorUtility.IsPersistent(b)) c.Save(b);
+                b.playable = VRC_AnimatorLayerControl.BlendableLayer.FX; b.layer = idx; b.goalWeight = w; b.blendDuration = 0;
+            }
         }
 
         static AnimatorState S(Ctx c, AnimatorStateMachine sm, string n, Motion m, float x, float y, bool wd)
@@ -164,11 +179,12 @@ namespace Pyrite9.Wheelchair
             {
                 var freeze = Clip(c, "AFK_Freeze"); AnimationUtility.SetEditorCurve(freeze, EditorCurveBinding.FloatCurve(chairPath, pc.GetType(), "IsActive"), Const(0, 1));
                 var unfreeze = Clip(c, "AFK_Unfreeze"); AnimationUtility.SetEditorCurve(unfreeze, EditorCurveBinding.FloatCurve(chairPath, pc.GetType(), "IsActive"), Const(1, 0.1f));
-                var fm = Layer(c, FreezeLayer);
+                var fm = Layer(c, FreezeLayer, 0f);
                 var fOff = S(c, fm, "Off", c.Empty, 300, 0, false); fm.defaultState = fOff;
                 var frozen = S(c, fm, "Frozen", freeze, 300, 100, false);
                 var hold = S(c, fm, "Unfreezing", freeze, 300, 200, false);
                 var thaw = S(c, fm, "Unfreeze", unfreeze, 300, 300, false);
+                FxGate(c, FreezeLayer, frozen, fOff);
                 OnAfk(T(c, fOff, frozen));
                 OffAfk(frozen, hold);
                 T(c, hold, thaw, 0, 1.2f);   // 몸이 앉을 때까지(Back 1초) 더 고정
@@ -182,10 +198,11 @@ namespace Pyrite9.Wheelchair
                 var reset = Clip(c, "AFK_FaceReset");
                 foreach (var kv in r.FaceBase)
                     AnimationUtility.SetEditorCurve(reset, EditorCurveBinding.FloatCurve(r.FacePath, typeof(SkinnedMeshRenderer), "blendShape." + kv.Key), Const(kv.Value, 0.1f));
-                var em = Layer(c, FaceLayer);
+                var em = Layer(c, FaceLayer, 0f);
                 var eOff = S(c, em, "Off", c.Empty, 300, 0, false); em.defaultState = eOff;
                 var eFace = S(c, em, "Face", r.Face, 300, 100, false);
                 var eReset = S(c, em, "Reset", reset, 300, 200, false);
+                FxGate(c, FaceLayer, eFace, eOff);
                 OnAfk(T(c, eOff, eFace));
                 OffAfk(eFace, eReset);
                 T(c, eReset, eOff, 0, 1f);
@@ -195,6 +212,8 @@ namespace Pyrite9.Wheelchair
             // 빈 상태 채우기(🔴 WD off 빈 상태 함정) — 우리 레이어만
             foreach (var l in fx.layers.Where(l => l.name.StartsWith("Wheelchair AFK")))
                 foreach (var cs in l.stateMachine.states) if (cs.state.motion == null) cs.state.motion = c.Empty;
+            log.AppendLine("afkmotion: FX AFK 레이어 " + string.Join(", ", fx.layers.Select((l, i) => (l, i)).Where(x => x.l.name.StartsWith("Wheelchair AFK")).Select(x => $"'{x.l.name}' #{x.i}"))
+                + " — 기본 weight 0, AFK 동안만 1(Layer Control)");
             EditorUtility.SetDirty(fx);
         }
 
@@ -319,11 +338,12 @@ namespace Pyrite9.Wheelchair
                 }
             }
 
-            var sm = Layer(c, FadeLayer);
+            var sm = Layer(c, FadeLayer, 0f);
             var sOff = S(c, sm, "Off", c.Empty, 300, 0, false); sm.defaultState = sOff;
             var sWait = S(c, sm, "Wait", cWait, 300, 100, false);
             var sOut = S(c, sm, "FadeOut", cOut, 300, 200, false);
             var sIn = S(c, sm, "FadeIn", cIn, 600, 100, false);
+            FxGate(c, FadeLayer, sWait, sOff);
             onAfk(T(c, sOff, sWait));
             Cond(T(c, sWait, sOff), afk, false); Cond(T(c, sWait, sOff), on, false);
             T(c, sWait, sOut, 0, 1f);

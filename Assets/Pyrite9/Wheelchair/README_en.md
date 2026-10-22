@@ -1,6 +1,6 @@
 # Pyrite9 Wheelchair
 
-Version 1.1.0 (2026-10-20)
+Version 1.1.1 (2026-10-22)
 
 A wheelchair gimmick for VRChat avatars. Drop the prefab under any humanoid avatar — it fits itself to the avatar when you build.
 
@@ -114,6 +114,7 @@ The inspector also has (its text follows Menu Language):
 
 ## Changelog
 
+- **1.1.1** (2026-10-22): Fixed the avatar's facial expressions getting stuck (not going back to neutral) just by adding the wheelchair — the AFK motion layers now do nothing until you go AFK. If you turned AFK Motion off to work around it, you can turn it back on. Also fixed clothing colors changing during the AFK fade on avatars that use Light Limit Changer.
 - **1.1.0** (2026-10-20): AFK motion while seated — stand up, stretch, walk away and disappear; sit back down when you return (made for each avatar at build time; inspector: Off / Auto / One-arm / Both arms, vanish Dissolve / Instant). Works in Full Body Tracking mode too.
 - **1.0.2** (2026-10-19): VR height following (Space Drag) now works at any VRChat avatar scale (before, scaling the avatar up straightened the legs). AFK while seated keeps you seated and sits you back down when you return. Fixed your avatar's own AFK and emotes being covered while the wheelchair is off. New inspector (sitting preview, last build, update notice).
 - **1.0.1** (2026-10-18): Full Body Tracking push-back now scales with VRChat avatar scaling (changing your height in the Quick Menu). Before, a smaller avatar pushed the chair the same distance and it moved too far.

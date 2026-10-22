@@ -57,6 +57,8 @@ namespace Pyrite9.Wheelchair
                 .Then.Run("Relative path roots", ctx => Guard(ctx, "paths", FillRelativeRoots));   // fitA가 루트를 옮긴 뒤
             InPhase(BuildPhase.Transforming)
                 .AfterPlugin("nadena.dev.modular-avatar")
+                // Light Limit Changer가 색을 텍스처에 굽고(NormalizeMaterials) 밝기 값을 쓴 뒤에 — AFK 페이드 사본이 그 머티리얼을 복사해야 색이 안 바뀐다(9-61)
+                .AfterPlugin("io.github.azukimochi.light-limit-changer")
                 .BeforePlugin("com.anatawa12.avatar-optimizer")
                 .Run("Scale full-body push-back", ctx => Guard(ctx, "fbt", ScaleFbt))
                 .Then.Run("Wheel spin speed", ctx => Guard(ctx, "spin", SpinSpeed))

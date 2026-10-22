@@ -19,10 +19,13 @@
 
 ---
 
-## What's new in 1.1.0. / 1.1.0 の新機能 / 1.1.0 새 기능
+## What's new in 1.1.0 · 1.1.1 / 1.1.0・1.1.1 の新機能 / 1.1.0·1.1.1 새 기능
 
 <p align="center"><img src="docs/images/09_afk.gif" width="480" alt="AFK motion while seated — Milfy (one-arm stretch) and Kipfel (both arms)"></p>
 
+- **1.1.1：不具合修正 / Bug fix / 버그 수정** — 車椅子を入れるだけでアバターの表情が固まる（元に戻らない）不具合を直しました。1.1.0 で AFK Motion をオフにして回避していた方は、オンに戻して大丈夫です。Light Limit Changer を使っているアバターで、AFK の消える演出中に服の色が変わる不具合も直しました  
+  Fixed the avatar's facial expressions getting stuck (not going back to neutral) just by adding the wheelchair in 1.1.0. If you turned AFK Motion off to work around it, you can turn it back on. Also fixed clothing colors changing during the AFK fade on avatars that use Light Limit Changer.  
+  1.1.0에서 휠체어를 넣기만 해도 아바타 표정이 굳던(원래대로 안 돌아오던) 것을 고쳤습니다. 피하려고 AFK Motion을 꺼 두셨다면 다시 켜셔도 됩니다. Light Limit Changer를 쓰는 아바타에서 AFK로 사라지는 동안 옷 색이 바뀌던 것도 고쳤습니다
 - **座ったまま AFK モーション** — AFK になると立ち上がって伸びをし、歩きながら消えます。戻ると現れて座り直します。ビルド時にアバターごとに自動で作成（設定不要）、表情はアバターのまぶた・リップシンクのシェイプキーを使います。フルトラッキングモードでも動きます  
   **AFK motion while seated** — when you go AFK you stand up, stretch, walk away and disappear; when you return you reappear and sit back down. Made for each avatar at build time (no setup); the face uses your avatar's eyelid and lip-sync blend shapes. Works in Full Body Tracking mode too.  
   **앉은 채 AFK 모션** — AFK가 되면 일어나 기지개를 켜고 걸어가며 사라지고, 돌아오면 다시 나타나 앉습니다. 빌드할 때 아바타마다 자동으로 만듭니다(설정 없음). 표정은 아바타의 눈꺼풀·립싱크 셰이프키를 씁니다. 풀 트래킹 모드에서도 동작합니다
