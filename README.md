@@ -19,10 +19,20 @@
 
 ---
 
-## What's new in 1.1.0 · 1.1.1 / 1.1.0・1.1.1 の新機能 / 1.1.0·1.1.1 새 기능
+> **お知らせ / Notice / 공지**  
+> VRChat の設定「フルボディトラッキングの移動アニメーション」をオンにしたまま、フルボディトラッキング＋車椅子の通常モード（メニューのフルトラッキングがオフ）でジョイスティック移動すると、体と車椅子が少しずつ浮いていきます。車椅子を使うときはこの設定をオフにしてください（メインメニューの設定、「フルボディトラッキングを許可」「キャリブレーション」「背骨のモード」のすぐ下）。  
+> If VRChat's setting that plays the walking animation during full-body tracking is on, moving with the joystick in full-body tracking with the wheelchair in normal mode (Full Body Tracking menu off) makes your body and the chair slowly rise. Turn this setting off while you use the wheelchair (main Settings menu, right below the full-body tracking options; Japanese UI: 「フルボディトラッキングの移動アニメーション」).  
+> VRChat 설정 「FBT 트래킹시 이동 애니메이션 사용」을 켠 채 풀 바디 트래킹 + 휠체어 일반 모드(메뉴 풀 트래킹 끔)에서 조이스틱으로 이동하면 몸과 휠체어가 조금씩 떠오릅니다. 휠체어를 쓸 때는 이 설정을 꺼 주세요(메인 메뉴 설정, 풀 바디 트래킹 허용·캘리브레이션·척추 모드 바로 밑).
+
+---
+
+## What's new in 1.1.0 – 1.1.2 / 1.1.0〜1.1.2 の新機能 / 1.1.0~1.1.2 새 기능
 
 <p align="center"><img src="docs/images/09_afk.gif" width="480" alt="AFK motion while seated — Milfy (one-arm stretch) and Kipfel (both arms)"></p>
 
+- **1.1.2：不具合修正 / Bug fixes / 버그 수정** — Write Defaults オンのアバターで衣装トグルが戻らない不具合、Light Limit Changer 使用時に AFK のあと白い破片が残る不具合、アルファマスク衣装で AFK 中に肌が透ける不具合、AFK の消える演出の途中で服から体が透ける不具合、座ったままエモートを使うと座りポーズが消える不具合、AFK 中に車椅子をオフにすると腰・足が固まる不具合を直しました。上のお知らせを README に追記しました  
+  Fixed outfit toggles not turning back on (Write Defaults ON avatars), white fragments left after AFK with Light Limit Changer, skin showing through alpha-mask outfits during AFK, the body showing through clothes in the middle of the AFK fade, the seated pose disappearing after an emote, and hips and feet sticking after turning the chair off during AFK. Added the notice above to the README.  
+  Write Defaults on 아바타 옷 토글이 안 돌아오던 것, Light Limit Changer 사용 시 AFK 뒤 흰 조각이 남던 것, 알파 마스크 의상 AFK 중 살 비침, AFK 페이드 도중 옷 사이로 몸이 비치던 것, 앉은 채 이모트 뒤 앉은 자세가 사라지던 것, AFK 중 휠체어를 끄면 골반·발이 굳던 것을 고쳤습니다. 위 공지를 README에 추가했습니다
 - **1.1.1：不具合修正 / Bug fix / 버그 수정** — 車椅子を入れるだけでアバターの表情が固まる（元に戻らない）不具合を直しました。1.1.0 で AFK Motion をオフにして回避していた方は、オンに戻して大丈夫です。Light Limit Changer を使っているアバターで、AFK の消える演出中に服の色が変わる不具合も直しました  
   Fixed the avatar's facial expressions getting stuck (not going back to neutral) just by adding the wheelchair in 1.1.0. If you turned AFK Motion off to work around it, you can turn it back on. Also fixed clothing colors changing during the AFK fade on avatars that use Light Limit Changer.  
   1.1.0에서 휠체어를 넣기만 해도 아바타 표정이 굳던(원래대로 안 돌아오던) 것을 고쳤습니다. 피하려고 AFK Motion을 꺼 두셨다면 다시 켜셔도 됩니다. Light Limit Changer를 쓰는 아바타에서 AFK로 사라지는 동안 옷 색이 바뀌던 것도 고쳤습니다

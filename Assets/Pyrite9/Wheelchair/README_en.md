@@ -1,6 +1,6 @@
 # Pyrite9 Wheelchair
 
-Version 1.1.1 (2026-10-22)
+Version 1.1.2 (2026-11-02)
 
 A wheelchair gimmick for VRChat avatars. Drop the prefab under any humanoid avatar — it fits itself to the avatar when you build.
 
@@ -105,6 +105,7 @@ The inspector also has (its text follows Menu Language):
 | The sitting pose is broken or overridden | Another gimmick is using the Action layer at the same time. Turn it off while seated. |
 | Feet are off the footrests / the seat is too narrow | Adjust Foot Height / Foot Forward / Seat Width Offset. |
 | The hips still go through the seat, or the body floats above it | Adjust **Seat Height Offset** (+ up / - down) by 0.01 m at a time and check with Build & Test. The footrests follow automatically. |
+| With full-body tracking, the body and the chair slowly rise while moving with the joystick | Turn off VRChat's setting that plays the walking animation during full-body tracking (see **Notes — Known limitation**). |
 
 ## Updating / removing
 
@@ -114,6 +115,7 @@ The inspector also has (its text follows Menu Language):
 
 ## Changelog
 
+- **1.1.2** (2026-11-02): Added a known limitation to Notes: with VRChat's full-body tracking walking-animation setting on, the body slowly rises while moving with the joystick in normal mode — turn that setting off while using the wheelchair. Fixed outfit toggles whose "on" side is an empty clip (common on Write Defaults ON avatars) not turning back on once turned off. Fixed white fragments staying visible after the AFK fade on avatars that use Light Limit Changer. Fixed skin showing through clothes during AFK on outfits that hide the body with an alpha mask (others saw it too), and the dissolve now keeps that mask. Fixed the body showing through the clothes in the middle of the AFK fade out and back in (since 1.1.0). Fixed the seated pose disappearing after using an emote while seated. Fixed the hips and feet staying stuck after turning the wheelchair off during AFK or right after coming back.
 - **1.1.1** (2026-10-22): Fixed the avatar's facial expressions getting stuck (not going back to neutral) just by adding the wheelchair — the AFK motion layers now do nothing until you go AFK. If you turned AFK Motion off to work around it, you can turn it back on. Also fixed clothing colors changing during the AFK fade on avatars that use Light Limit Changer.
 - **1.1.0** (2026-10-20): AFK motion while seated — stand up, stretch, walk away and disappear; sit back down when you return (made for each avatar at build time; inspector: Off / Auto / One-arm / Both arms, vanish Dissolve / Instant). Works in Full Body Tracking mode too.
 - **1.0.2** (2026-10-19): VR height following (Space Drag) now works at any VRChat avatar scale (before, scaling the avatar up straightened the legs). AFK while seated keeps you seated and sits you back down when you return. Fixed your avatar's own AFK and emotes being covered while the wheelchair is off. New inspector (sitting preview, last build, update notice).
@@ -122,6 +124,7 @@ The inspector also has (its text follows Menu Language):
 
 ## Notes
 
+- **Known limitation — the body slowly rises while moving (full-body tracking):** if VRChat's setting that plays the walking animation during full-body tracking is **on**, and you use full-body tracking with the menu **Full Body Tracking off** (normal mode), your body and the wheelchair slowly rise while you move with the joystick. While you move, VRChat moves your hips with the walking animation, and the height follow then measures that raised height. **Turn this VRChat setting off while you use the wheelchair.** It is in the main Settings menu, right below the full-body tracking options (allow full-body tracking, calibration, spine mode). Japanese UI: 「フルボディトラッキングの移動アニメーション」, Korean UI: 「FBT 트래킹시 이동 애니메이션 사용」.
 - Humanoid avatars only. Very unusual proportions may need the offsets above.
 - Uses the **Action** layer for the sitting pose. Other gimmicks that also use the Action layer may conflict.
 - While seated, your avatar's Gesture layers are copied into the Action layer so the fingers keep following your gestures. Like in the Gesture layer, they only move the hands.

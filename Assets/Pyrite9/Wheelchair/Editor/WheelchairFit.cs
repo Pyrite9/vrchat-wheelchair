@@ -486,11 +486,31 @@ namespace Pyrite9.Wheelchair
             var sm = fx.layers[fx.layers.Length - 1].stateMachine;
             if (!EditorUtility.IsPersistent(sm)) save(sm);
             var st = sm.AddState("Scale");
-            st.motion = tree; st.writeDefaultValues = false;
+            // WD는 아바타 FX에 맞춘다(1.1.2) — 1.1.1은 off 고정이라 WD on 아바타에 weight 1 WD off 레이어가 섞여, 빈 클립 토글(켬 = 빈 클립)이
+            //   기본값을 못 되돌려 옷을 벗었다 다시 못 입었다(Milfy). 트리가 Scaler 크기 6축을 늘 다 써서 WD on이어도 같은 값
+            bool wd = AvatarWriteDefaults(fx, out int wdOn, out int wdOff);
+            st.motion = tree; st.writeDefaultValues = wd;
             sm.defaultState = st;
             EditorUtility.SetDirty(fx);
-            log.AppendLine($"scale: FX '{ScaleLayer}' — {string.Join(", ", scalers.Select(t => t.name))} 크기 = {ScaleParam} ÷ {sr:F3}");
+            log.AppendLine($"scale: FX '{ScaleLayer}' — {string.Join(", ", scalers.Select(t => t.name))} 크기 = {ScaleParam} ÷ {sr:F3}, WD {(wd ? "on" : "off")}(아바타 FX 상태 on {wdOn} / off {wdOff})");
             return true;
+        }
+
+        // 아바타 FX 기존 상태의 WD 다수결(MA matchAvatarWriteDefaults와 같은 발상) — 휠체어 레이어('Wheelchair…')와
+        //   상태 하나짜리 블렌드 트리 레이어(WD off 아바타도 Direct 트리는 WD on으로 쓴다)는 빼고 센다. 같으면·없으면 off(1.1.1과 같음)
+        public static bool AvatarWriteDefaults(AnimatorController ac, out int on, out int off)
+        {
+            on = 0; off = 0;
+            foreach (var l in ac.layers)
+            {
+                if (l.stateMachine == null || l.name.StartsWith("Wheelchair")) continue;
+                var states = new List<AnimatorState>();
+                void Walk(AnimatorStateMachine m) { states.AddRange(m.states.Select(s => s.state)); foreach (var c in m.stateMachines) Walk(c.stateMachine); }
+                Walk(l.stateMachine);
+                if (states.Count == 1 && states[0].motion is BlendTree) continue;
+                foreach (var s in states) if (s.writeDefaultValues) on++; else off++;
+            }
+            return on > off;
         }
 
         // 몸 올림 적용(fitB 다음, height 전): 휠체어 레이어의 앉기 클립 RootT.y, 골반 추종 오프셋(Seat), 풀 트래킹 센서 상자.

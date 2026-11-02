@@ -1,17 +1,18 @@
 // Pyrite9 Wheelchair — 앉은 채 AFK 모션 레이어를 빌드된 Action·FX에 붙인다(own-model 9-56, 개발 모듈 WcAfkBuild에서 옮김)
 //   Action 'Wheelchair AFK'       : Off → Leave(AFK & 휠체어 켜짐, 머리·손·손가락·눈·입·골반·발 = Animation, Action 무게 1) → 풀리면 Back(1초 크로스페이드, 앉기)
 //                                   → Restore(머리·손·손가락·눈·입 = Tracking, 골반·발 = Animation — 휠체어 'On <모드>' 재진입이 모드에 맞게) → Off
-//                                   휠체어 FBT 모드면 Restore → Restore FBT(전부 Tracking, Action 무게 0) → Off
+//                                   휠체어 FBT 모드거나 휠체어가 꺼졌으면 Restore FBT(전부 Tracking, Action 무게 0) → Off
 //   Action 'Wheelchair AFK Track' : AFK 동안 0.25초마다 전신 = Animation 다시(다른 레이어가 Tracking을 걸 때의 보험)
 //   FX 'Wheelchair AFK Freeze'    : 휠체어 루트 VRC Parent Constraint IsActive 0(몸이 걸어가도 휠체어는 제자리) → 풀리면 1.2초 더 → 1 → Off
 //   FX 'Wheelchair AFK Face'      : AFK 얼굴 → 풀리면 Reset(표정 키를 빌드 기본값으로 0.1초) → Off
-//   FX 'Wheelchair AFK Fade'      : 사라지기 — 디졸브(사본 머티리얼로 바꿔 끼우고 _AlphaMaskValue 1 → 0) 또는 즉시(눈이 다 감기는 순간)
+//   FX 'Wheelchair AFK Fade'      : 사라지기 — 디졸브(사본 머티리얼로 바꿔 끼우고 _AlphaMaskValue 원본 Offset → 0 이하) 또는 즉시(눈이 다 감기는 순간)
 //   🔴 WD off(FX) 레이어는 지나간 값을 붙잡는다 → Off·빈 상태는 커브 없는 빈 클립. 머티리얼·알파·표정·IsActive는 지나가는 상태에서만 쓰고,
 //      끝에 원래 값을 한 번 써 둔다. Action은 WD on(빈 상태가 휴머노이드를 덮지 않게)
 //   🔴 빈 클립이어도 FX 맨 끝 weight 1 레이어는 자기 키(표정·머티리얼)를 붙잡아 아바타 제스처 표정·머티리얼 토글을 덮었다
 //      (1.1.0, 넣기만 해도 표정이 죽음 — AFK Motion 끔으로 풀림, 사용자 신고 10-22)
 //      → FX AFK 레이어는 기본 weight 0, AFK에 들어가는 상태에서 1, Off에 돌아오면 0(VRCAnimatorLayerControl — 인덱스는 NDMF가 뒤 패스에서도 맞춰 줌)
 //   lilToon(알파 마스크 있는 것)은 Cutout+Dither 사본으로 디졸브, 그 밖(Poiyomi·lilToon Lite/Multi·FakeShadow 등)은 페이드 중간에 한 번에 숨김
+//   (배포판 셰이더 Shaders/Pyrite9WC_Hidden — 아무것도 안 그림. 렌더러 단위 _Color 애니메이션(LLC)에 안 덮인다, 1.1.2)
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
@@ -145,6 +146,10 @@ namespace Pyrite9.Wheelchair
             var t0 = T(c, off, leave); Cond(t0, afk, true); Cond(t0, on, true);
             Cond(T(c, leave, back, 1), afk, false);
             Cond(T(c, leave, back, 1), on, false);
+            // 휠체어가 꺼졌으면 앉지 않고 Sit Off처럼 전부 Tracking·무게 0으로(1.1.2, 검토 1-5 — Restore가 골반·발을 Animation으로 둔 채 끝나 굳었다).
+            //   조건 전이를 exit time 전이보다 먼저 둔다 — Restore에 들어간 같은 프레임에 넘어가도 Restore FBT의 Tracking이 마지막이라 이긴다
+            Cond(T(c, back, restoreFbt, 0.5f), on, false);
+            Cond(T(c, restore, restoreFbt), on, false);
             T(c, back, restore, 0, 1f);
             Cond(T(c, restore, off, 0, 0.6f), fbt, false);
             Cond(T(c, restore, restoreFbt, 0, 0.6f), fbt, true);
@@ -161,7 +166,7 @@ namespace Pyrite9.Wheelchair
         }
 
         // ================================================================ FX
-        sealed class Slot { public string Path; public Type Type; public int Index; public Material Orig, Fade; public bool Pop; }
+        sealed class Slot { public string Path; public Type Type; public int Index; public Material Orig, Fade; public bool Pop, Early; }
 
         public static void AddFx(AnimatorController fx, Transform root, Transform holder, WcAfkMotion.Result r, AfkVanish vanish, Action<UnityEngine.Object> save, StringBuilder log)
         {
@@ -239,33 +244,51 @@ namespace Pyrite9.Wheelchair
             const float InHold = 1.0f, InT = 1.0f, InOpen0 = 1.95f, InOpen1 = 2.25f, InLen = 2.3f;
             bool instant = vanish == AfkVanish.Instant;
 
-            var slots = new List<Slot>(); var copies = new Dictionary<Material, (Material m, bool pop)>();
+            // 🔴 'material._AlphaMaskValue' 커브는 렌더러 단위 — 그 렌더러의 원본·사본 머티리얼 전부에 닿는다(1.1.2, 검토 1-1).
+            //    1.1.1은 1 → 0 → 1로 써서 알파 마스크로 살을 숨긴 원본(소체 투과 마스크, Offset 0)이 AFK 동안 마스크가 풀렸다.
+            //    → 커브는 그 렌더러 원본의 Offset a에서 시작·끝(마스크 쓰는 사본은 마스크·모드·Scale 그대로, 안 쓰는 사본은 Scale 1 − a),
+            //      한 렌더러에 Offset이 다른 원본이 섞이면 그 렌더러는 커브 없이 한 번에 숨김
+            var slots = new List<Slot>(); var copies = new Dictionary<(Material, float), Material>();
+            var fadePaths = new List<(string Path, Type Type, float A, float B)>();
             Material invisible = null;
+            Material Invisible() { if (invisible == null) { invisible = MakeInvisible(); c.Save(invisible); } return invisible; }
+            int mixed = 0;
             foreach (var rd in root.GetComponentsInChildren<Renderer>(true))
             {
                 if (!(rd is SkinnedMeshRenderer) && !(rd is MeshRenderer)) continue;
                 if (rd.transform.IsChildOf(holder) || rd.gameObject.CompareTag("EditorOnly")) continue;
                 string path = AnimationUtility.CalculateTransformPath(rd.transform, root);
                 var mats = rd.sharedMaterials;
+                var live = mats.Where(MaskLive).Select(m => m.GetFloat("_AlphaMaskValue")).Distinct().ToList();
+                bool curve = live.Count <= 1;
+                if (!curve) mixed++;
+                float a = live.Count == 1 ? live[0] : 1f, maxScale = 0f;
+                int first = slots.Count;
                 for (int i = 0; i < mats.Length; i++)
                 {
                     var m = mats[i];
                     if (m == null) continue;
-                    if (!copies.TryGetValue(m, out var f))
+                    Material fade = null;
+                    if (curve && !copies.TryGetValue((m, a), out fade))
                     {
-                        var cp = MakeCopy(m, log);
-                        if (cp == null) { if (invisible == null) { invisible = MakeInvisible(); c.Save(invisible); } f = (invisible, true); }
-                        else { c.Save(cp); f = (cp, false); }
-                        copies[m] = f;
+                        fade = MakeCopy(m, a);
+                        if (fade != null) c.Save(fade);
+                        copies[(m, a)] = fade;
                     }
-                    slots.Add(new Slot { Path = path, Type = rd.GetType(), Index = i, Orig = m, Fade = f.m, Pop = f.pop });
+                    if (fade != null && MaskLive(m)) maxScale = Mathf.Max(maxScale, m.GetFloat("_AlphaMaskScale"));
+                    // 빼기 모드(4)는 값이 내려가면 숨긴 곳이 드러난다 → 커브가 닿는 렌더러에선 처음부터 숨김
+                    bool early = fade == null && curve && MaskLive(m) && MaskMode(m) == 4;
+                    slots.Add(new Slot { Path = path, Type = rd.GetType(), Index = i, Orig = m, Fade = fade ?? Invisible(), Pop = fade == null, Early = early });
                 }
+                if (slots.Skip(first).Any(s => !s.Pop)) fadePaths.Add((path, rd.GetType(), a, Mathf.Min(a - 1f, -maxScale)));
+                else foreach (var s in slots.Skip(first)) s.Early = false;   // 커브가 없으면 원본에 아무것도 안 닿는다
             }
-            var fadePaths = slots.Where(s => !s.Pop).Select(s => (s.Path, s.Type)).Distinct().ToList();
-            log.AppendLine($"afkmotion: 사라지기 {(instant ? "즉시" : "디졸브")} — 렌더러 {slots.Select(s => s.Path).Distinct().Count()}개, 슬롯 {slots.Count}개, 디졸브 사본 {copies.Values.Count(v => !v.pop)}개, 한 번에 숨김 {slots.Count(s => s.Pop)}슬롯");
+            log.AppendLine($"afkmotion: 사라지기 {(instant ? "즉시" : "디졸브")} — 렌더러 {slots.Select(s => s.Path).Distinct().Count()}개, 슬롯 {slots.Count}개, 디졸브 사본 {copies.Values.Count(v => v != null)}개, 한 번에 숨김 {slots.Count(s => s.Pop)}슬롯"
+                + $" (처음부터 숨김 {slots.Count(s => s.Early)}), 알파 마스크 원본 Offset {string.Join("·", fadePaths.Select(p => p.A).Distinct().Select(v => v.ToString("0.##")))}"
+                + (mixed > 0 ? $", Offset이 섞인 렌더러 {mixed}개는 한 번에 숨김" : ""));
             if (slots.Count == 0) return;
 
-            EditorCurveBinding Alpha((string Path, Type Type) p) => EditorCurveBinding.FloatCurve(p.Path, p.Type, "material._AlphaMaskValue");
+            EditorCurveBinding Alpha(string path, Type type) => EditorCurveBinding.FloatCurve(path, type, "material._AlphaMaskValue");
             void Mats(AnimationClip clip, Func<Slot, (float t, bool fade)[]> keys)
             {
                 foreach (var s in slots)
@@ -275,41 +298,40 @@ namespace Pyrite9.Wheelchair
                 }
             }
 
-            // Wait: 걷기 중 사라질 때까지 기다림(알파 1만 — 길이용)
+            // Wait: 걷기 중 사라질 때까지 기다림 — 길이용 커브는 없는 경로에만(원본 머티리얼에 아무것도 안 씀)
             var cWait = Clip(c, "AFK_Fade_Wait");
-            foreach (var p in fadePaths) AnimationUtility.SetEditorCurve(cWait, Alpha(p), Const(1, waitT));
-            if (fadePaths.Count == 0) AnimationUtility.SetEditorCurve(cWait, EditorCurveBinding.FloatCurve("Pyrite9WC_AfkTimer", typeof(GameObject), "m_IsActive"), Const(1, waitT));   // 길이용(없는 경로 — 아무것도 안 건드림)
+            AnimationUtility.SetEditorCurve(cWait, EditorCurveBinding.FloatCurve("Pyrite9WC_AfkTimer", typeof(GameObject), "m_IsActive"), Const(1, waitT));
 
             float outLen = AlphaT0 + FadeT + 0.3f, popOut = instant ? CloseT : AlphaT0 + FadeT * 0.5f, popIn = instant ? InHold : InHold + InT * 0.5f;
             var cOut = Clip(c, instant ? "AFK_Fade_Out_Instant" : "AFK_Fade_Out");
             float swapOut = instant ? CloseT : 0f;
-            Mats(cOut, s => s.Pop ? new[] { (0f, false), (popOut, true) } : new[] { (0f, false), (swapOut, true) });
+            Mats(cOut, s => s.Early ? new[] { (0f, true) } : s.Pop ? new[] { (0f, false), (popOut, true) } : new[] { (0f, false), (swapOut, true) });
             foreach (var p in fadePaths)
             {
                 AnimationCurve cv;
-                if (instant) cv = Step((0f, 1f), (CloseT, 0f), (outLen, 0f));
+                if (instant) cv = Step((0f, p.A), (CloseT, p.B), (outLen, p.B));
                 else
                 {
-                    cv = new AnimationCurve(); cv.AddKey(0f, 1f);
-                    for (int k = 0; k <= 24; k++) { float u = k / 24f; cv.AddKey(AlphaT0 + FadeT * u, 1f - EaseS(u)); }
-                    cv.AddKey(outLen, 0f); Linear(cv);
+                    cv = new AnimationCurve(); cv.AddKey(0f, p.A);
+                    for (int k = 0; k <= 24; k++) { float u = k / 24f; cv.AddKey(AlphaT0 + FadeT * u, Mathf.Lerp(p.A, p.B, EaseS(u))); }
+                    cv.AddKey(outLen, p.B); Linear(cv);
                 }
-                AnimationUtility.SetEditorCurve(cOut, Alpha(p), cv);
+                AnimationUtility.SetEditorCurve(cOut, Alpha(p.Path, p.Type), cv);
             }
             var cIn = Clip(c, instant ? "AFK_Fade_In_Instant" : "AFK_Fade_In");
             float swapBack = instant ? InHold : InLen;
-            Mats(cIn, s => s.Pop ? new[] { (0f, true), (popIn, false), (InLen, false) } : new[] { (0f, true), (swapBack, false), (InLen, false) });
+            Mats(cIn, s => s.Early ? new[] { (0f, true), (InLen, false) } : s.Pop ? new[] { (0f, true), (popIn, false), (InLen, false) } : new[] { (0f, true), (swapBack, false), (InLen, false) });
             foreach (var p in fadePaths)
             {
                 AnimationCurve cv;
-                if (instant) cv = Step((0f, 0f), (InHold, 1f), (InLen, 1f));
+                if (instant) cv = Step((0f, p.B), (InHold, p.A), (InLen, p.A));
                 else
                 {
-                    cv = new AnimationCurve(); cv.AddKey(0f, 0f); cv.AddKey(InHold, 0f);
-                    for (int k = 1; k <= 16; k++) { float u = k / 16f; cv.AddKey(InHold + InT * u, EaseS(u)); }
-                    cv.AddKey(InLen, 1f); Linear(cv);
+                    cv = new AnimationCurve(); cv.AddKey(0f, p.B); cv.AddKey(InHold, p.B);
+                    for (int k = 1; k <= 16; k++) { float u = k / 16f; cv.AddKey(InHold + InT * u, Mathf.Lerp(p.B, p.A, EaseS(u))); }
+                    cv.AddKey(InLen, p.A); Linear(cv);
                 }
-                AnimationUtility.SetEditorCurve(cIn, Alpha(p), cv);
+                AnimationUtility.SetEditorCurve(cIn, Alpha(p.Path, p.Type), cv);
             }
             // 눈 감기(디졸브·즉시 모두 사라지기 직전에 눈을 감는다) — Out 0~CloseT 감기, In 끝에 뜨기
             if (r.Face != null && r.FaceBase != null)
@@ -353,33 +375,67 @@ namespace Pyrite9.Wheelchair
         }
 
         // ---------------------------------------------------------------- 사본 머티리얼
+        // 한 번에 숨김 슬롯 — 아무것도 안 그리는 배포판 셰이더(1.1.2). 1.1.1의 lilToon Cutout + _Color 알파 0은 Light Limit Changer가
+        //   렌더러 단위 'material._Color'(1,1,1,1) 애니메이션으로 알파를 덮어 흰 조각이 남았다(Salt + GhostFlow 캡처·FakeShadow 슬롯)
+        const string HiddenShaderGuid = "21d4c42dfc5d4f648f97fad06a138538", HiddenShaderName = "Hidden/Pyrite9/Wheelchair/Invisible";
         static Material MakeInvisible()
         {
+            var sh = AssetDatabase.LoadAssetAtPath<Shader>(AssetDatabase.GUIDToAssetPath(HiddenShaderGuid)) ?? Shader.Find(HiddenShaderName);
+            if (sh != null) return new Material(sh) { name = "AFK_Hidden" };
+            // 셰이더를 못 찾으면(배포판 일부만 임포트) lilToon Cutout — 문턱이 1보다 커서 알파가 1로 덮여도 잘린다
             var f = new Material(Shader.Find("lilToon")) { name = "AFK_Hidden" };
             SetupCutout(f, false);
             f.SetColor("_Color", new Color(0, 0, 0, 0));
-            f.SetFloat("_Cutoff", 0.5f);
+            f.SetFloat("_Cutoff", 2f);
             return f;
         }
 
-        // lilToon(알파 마스크가 있는 일반 변형)만 디졸브 사본, 아니면 null(한 번에 숨김)
-        static Material MakeCopy(Material m, StringBuilder log)
+        // 알파 마스크가 실제로 보이는 원본(Cutout·Transparent + 모드 1~4) — 렌더러 단위 _AlphaMaskValue 커브가 이 원본의 모습을 바꾼다
+        static bool MaskLive(Material m)
+        {
+            if (m == null || !m.HasProperty("_AlphaMaskValue") || !m.HasProperty("_AlphaMaskMode") || MaskMode(m) == 0) return false;
+            var sh = m.shader != null ? m.shader.name : "";
+            return sh.Contains("Cutout") || sh.Contains("Transparent");
+        }
+        static int MaskMode(Material m) => Mathf.RoundToInt(m.GetFloat("_AlphaMaskMode"));
+
+        // lilToon(알파 마스크가 있는 일반 변형)만 디졸브 사본, 아니면 null(한 번에 숨김). a = 이 렌더러 커브의 시작·끝 값(원본 Offset)
+        //   알파 = saturate(마스크 × Scale + Offset): 마스크 쓰는 원본(모드 1·2)은 마스크·모드·Scale 그대로 → Offset a에서 원본과 같다
+        //   안 쓰는 원본은 마스크 없음(흰색) + Scale 1 − a → Offset a에서 1, a − 1 이하에서 0(a = 1이면 1.1.1과 같음)
+        static Material MakeCopy(Material m, float a)
         {
             var sh = m.shader != null ? m.shader.name : "";
             bool lil = sh.Contains("lilToon") && !sh.Contains("Lite") && !sh.Contains("Multi") && !sh.Contains("FakeShadow") && !sh.Contains("Fur") && !sh.Contains("Gem") && !sh.Contains("Refraction") && m.HasProperty("_AlphaMaskValue");
             if (!lil) return null;
+            bool live = MaskLive(m);
+            if (live && MaskMode(m) > 2) return null;   // 더하기·빼기 모드는 한 커브로 못 맞춘다
             bool transparent = sh.Contains("Transparent");
             bool outline = sh.Contains("Outline");
             var f = new Material(m) { name = m.name + "_AfkFade" };
             SetupCutout(f, outline);
-            f.SetFloat("_AlphaMaskMode", transparent ? 2 : 1);   // 불투명 원본은 대체, Transparent는 곱하기(머리끝 알파 유지)
-            f.SetTexture("_AlphaMask", null);
-            f.SetFloat("_AlphaMaskScale", 0f);
-            f.SetFloat("_AlphaMaskValue", 1f);
+            if (!live)
+            {
+                f.SetFloat("_AlphaMaskMode", transparent ? 2 : 1);   // 불투명 원본은 대체, Transparent는 곱하기(머리끝 알파 유지)
+                f.SetTexture("_AlphaMask", null);
+                f.SetFloat("_AlphaMaskScale", 1f - a);
+            }
+            else   // 렌더링 모드 설정이 건드려도 원본 마스크 그대로
+            {
+                f.SetFloat("_AlphaMaskMode", MaskMode(m));
+                f.SetTexture("_AlphaMask", m.GetTexture("_AlphaMask"));
+                f.SetTextureScale("_AlphaMask", m.GetTextureScale("_AlphaMask")); f.SetTextureOffset("_AlphaMask", m.GetTextureOffset("_AlphaMask"));
+                f.SetFloat("_AlphaMaskScale", m.GetFloat("_AlphaMaskScale"));
+            }
+            f.SetFloat("_AlphaMaskValue", a);
             f.SetFloat("_UseDither", 1f);
             f.SetTexture("_DitherTex", Bayer());
             f.SetFloat("_DitherMaxValue", 255f);
-            f.SetFloat("_Cutoff", 0.5f);
+            // 🔴 Cutoff 1 + 아웃라인 AlphaToMask 끔(1.1.2, 9-66) — lilToon 아웃라인 패스는 디더 뒤에도 fwidth 선명화((a − Cutoff) / fwidth + 0.5)를 해서
+            //    Cutoff 0.5면 디더 구멍 옆 픽셀이 살아남았다 → 페이드 중간에 옷 구멍으로 몸 아웃라인(뒷면 껍질)이 비침.
+            //    디더 뒤 알파는 0·1뿐이라 Cutoff 1이면 0은 버려지고 1은 0.5로 남는다 — 그 0.5가 AlphaToMask(MSAA)로 반투명해지지 않게 끈다.
+            //    메인 패스는 디더면 Cutoff를 안 쓰고(나오는 알파 1), 그림자는 clip(a − 1)로 같다
+            f.SetFloat("_Cutoff", 1f);
+            if (f.HasProperty("_OutlineAlphaToMask")) f.SetFloat("_OutlineAlphaToMask", 0f);
             f.renderQueue = m.renderQueue;
             return f;
         }
